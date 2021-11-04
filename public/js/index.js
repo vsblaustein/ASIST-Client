@@ -11,6 +11,8 @@ var sessionId = 1;
 var sessionLimit = 1;
 var victimCount;
 var feedback_str = "No Feedback Given";
+var replay = true;
+//var replay_moves = new Array();
 const socket = io(socketURL, {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -38,9 +40,11 @@ var gamePlayState = new Phaser.Class({
         console.log("GamePlay preload");
         this.mapConfig = getMapData();
         this.gameConfig = getGameData();
-        let randomSelectionValues = getRandomConfig();
-        if (randomSelectionValues!=null){
-            this._updateGameConfig(randomSelectionValues)
+        if(!replay){
+            let randomSelectionValues = getRandomConfig();
+            if (randomSelectionValues!=null){
+                this._updateGameConfig(randomSelectionValues)
+            }
         }
         victimCount = this.mapConfig["victimIndexes"].length;
         var initializedGameData = {"event":"game_created", "map_config": this.mapConfig, "game_config":this.gameConfig, 
@@ -56,9 +60,21 @@ var gamePlayState = new Phaser.Class({
         {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
     },
 
-    create: function() {
+    create: async function() {
         console.log("GamePlay create");
         this.gameState = new GameState(this.mapConfig, this)
+        var replay_moves = new Array();
+        replay_moves = await this._parseCSV(replay_moves);
+        console.log(replay_moves);
+        console.log(replay_moves.at(1));
+
+        console.log("length: " + replay_moves.length);
+
+        for(let i = 0; i < replay_moves.length; i++) {
+            for(let j = 0; j < replay_moves[i].length; j++) {
+                console.log(replay_moves[i][j]);
+            }
+        }
 
         this.playerList = Array();
         this.playersCurrentLoc = Array();
@@ -175,6 +191,27 @@ var gamePlayState = new Phaser.Class({
     _updateGameConfig: function(randomSelectionValues){
         this.mapConfig["victimIndexes"] = randomSelectionValues[0]
         this.mapConfig["roomVictimMapping"] = randomSelectionValues[1]
+    },
+
+    _parseCSV: async function(csv){
+        fetch('assets/game1updated.csv')
+        .then(response => response.text())
+        .then(data => {
+  	        // Do something with your data
+            Papa.parse(data, {
+                header: true,
+                complete: function(results){
+                    results.data.map((data, index) =>{
+                        var coords = new Array();
+                        coords.push(data.x);
+                        coords.push(data.z);
+                        coords.push(data.event);
+                        csv.push(coords); 
+                    });
+                }
+            });
+        });
+        return csv;
     }
 });
 
