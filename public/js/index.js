@@ -12,7 +12,7 @@ var sessionLimit = 1;
 var victimCount;
 var feedback_str = "No Feedback Given";
 var replay = true;
-//var replay_moves = new Array();
+var replay_moves = new Array();
 const socket = io(socketURL, {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -63,13 +63,10 @@ var gamePlayState = new Phaser.Class({
     create: async function() {
         console.log("GamePlay create");
         this.gameState = new GameState(this.mapConfig, this)
-        var replay_moves = new Array();
-        replay_moves = await this._parseCSV(replay_moves);
-        console.log(replay_moves);
-        console.log(replay_moves.at(1));
 
-        console.log("length: " + replay_moves.length);
+        replay_moves = await this._parseCSV();
 
+        console.log("Replay length", replay_moves.length)
         for(let i = 0; i < replay_moves.length; i++) {
             for(let j = 0; j < replay_moves[i].length; j++) {
                 console.log(replay_moves[i][j]);
@@ -193,25 +190,24 @@ var gamePlayState = new Phaser.Class({
         this.mapConfig["roomVictimMapping"] = randomSelectionValues[1]
     },
 
-    _parseCSV: async function(csv){
-        fetch('assets/game1updated.csv')
-        .then(response => response.text())
-        .then(data => {
-  	        // Do something with your data
-            Papa.parse(data, {
-                header: true,
-                complete: function(results){
-                    results.data.map((data, index) =>{
-                        var coords = new Array();
-                        coords.push(data.x);
-                        coords.push(data.z);
-                        coords.push(data.event);
-                        csv.push(coords); 
-                    });
-                }
-            });
+    _parseCSV: async function(){
+        var replay_data = new Array()
+        const data = await fetch('assets/game1updated.csv').then(response => response.text())
+        Papa.parse(data, {
+            header: true,
+            complete: function(results){
+                results.data.map((data, index) =>{
+                    var coords = new Array();
+                    coords.push(data.x);
+                    coords.push(data.z);
+                    coords.push(data.event);
+                    replay_data.push(coords);
+                });
+            }
         });
-        return csv;
+        console.log("Replay length", replay_data.length)
+        return replay_data
+
     }
 });
 
