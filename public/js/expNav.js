@@ -1,3 +1,5 @@
+import {getSurveyJson} from "/js/config.js";
+
 var actExpSmryBtn = function () {
 // Activates the button to visit experiment information page on clicking the box to agree on the experiment conditions
     if($(this).prop('checked') == true) {
@@ -7,50 +9,68 @@ var actExpSmryBtn = function () {
     }
 };
 
-var dsplyExpSmry = function () {
-    //Display experiment information page
-    if ($("#agree").prop('checked') == true) {
-        $("#tmcn").hide();
-        $("#mainInfo").show();
-    } else {
-        alert('Please indicate that you have read and agree to the Terms and Conditions and Privacy Policy');
-    }
-};
-
-var joinGame = function(socketObj, hideElement, showElement, keyMessage, gTime){
+var changeDisplay = function(socketObj, handlerId, hideElement, showElement, keyData){
     $(hideElement).hide();
-    socketObj.emit('start_wait', {"key": keyMessage, "kt": new Date().toISOString(),  "dt": gTime});
+    keyData["time"]  = new Date().toISOString();
+    socketObj.emit(handlerId, keyData)
     $(showElement).show();
 }
 
-var endSession = function(gameObj, socketObj, turkObj, timerObj, playersList, playerId, roomIdx, sessionId, selectIdx, keyMessage, sessionLimit, sessionMessage){
+var joinQuiz = function(socket, socketId, awsID){
+    changeDisplay(socket, "game_info", "#mainInfo2", "#surveyContainer", {"event":"start_quiz", "aws_id": awsID, "socket_id":socketId})
+    var sendDataToServer = function (survey) {
+        let quizResult = true;
+        var quizData;
+        for (var key in survey.data){
+            if (survey.data[key] != "correct"){
+                quizResult = false;
+                break
+            }
+        }
+        if (quizResult===true){
+            quizData = {"event":"quiz_passed", "quiz_data": survey.data, "aws_id": awsID, "socket_id":socketId}
+            changeDisplay(socket, "game_info", "#surveyContainer", "#quiz-success", quizData)
+        }else{
+            quizData = {"event":"quiz_failed", "quiz_data": survey.data, "aws_id": awsID, "socket_id":socketId}
+            changeDisplay(socket, "game_info", "#surveyContainer", "#quiz-fail", quizData)
+        }
+    }
+    console.log("Quiz load");
+    Survey.StylesManager.applyTheme("modern");
+    const surveyJSON = getSurveyJson();
+    var survey = new Survey.Model(surveyJSON);
+    $("#surveyContainer").Survey({
+        model: survey,
+        onComplete: sendDataToServer
+    });
+}
 
+var endSession = function(gameObj, socketObj, timerObj, playerId, roomIdx, sessionId, awsID, socketId, keyMessage, sessionLimit, sessionMessage){
     gameObj.scene.stop("GamePlay");
     timerObj.stop();
-    $("#phaser-game").hide();
-    let playersUpdateTime = Array();
-    for (let player of playersList){
-        playersUpdateTime.push(player.updateTime)
-    }
-    socketObj.emit('end_game', {"key": keyMessage, "s_id":sessionId, "rd_idx":selectIdx, 'rm_id':roomIdx, 'p_id': playerId, "kt": new Date().toISOString(), "dt": playersUpdateTime})
+    $("#game-screen").hide();
+    socketObj.emit('end_game', {"event": keyMessage, "s_id":sessionId, 'rm_id':roomIdx, "aws_id": awsID, "socket_id":socketId,
+    'p_id': playerId, "time": new Date().toISOString()})
     if (sessionId==sessionLimit){
-        turkObj.submit({"p_id":playerId, "rm_id":roomIdx});
-        $("#game-over").show();
+        $("#exp-close").show();
+        gameObj.destroy();
     }else{
         $("#session-message").text(sessionMessage);
-        $("#session-completed").text("No of Games Played: "+sessionId);
+        $("#session-completed").text("Number of Games Played: "+sessionId);
         $("#session-over").show();
         sessionId += 1;
     }
     return sessionId
 }
 
-var startSession = function(gameObj, socketObj, sessionId, hideElement, showElement, timerElement, keyMessage, gTime){
+var startSession = function(gameObj, socketObj, gameInfoObj, hideElement, showElement, timerElement, keyData){
     $(hideElement).hide();
-    $(showElement).css("display", "flex");
-    $(timerElement).text(sessionId);
-    socketObj.emit('start_game', {"key": keyMessage, "s_id":sessionId, "kt": new Date().toISOString(), "dt": gTime})
+    $(showElement).show();
+    $(timerElement).text(keyData["s_id"]);
+    keyData["time"]  = new Date().toISOString();
+    socketObj.emit('start_game', keyData)
     gameObj.scene.start("GamePlay");
+    gameInfoObj.scene.start("GameInfo");
 }
 
-export {actExpSmryBtn, dsplyExpSmry, endSession, startSession, joinGame};
+export {actExpSmryBtn, endSession, startSession, joinQuiz, changeDisplay};

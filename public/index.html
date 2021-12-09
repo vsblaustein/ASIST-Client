@@ -5,8 +5,10 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <link rel="stylesheet" type="text/css" href="/stylesheets/game.css">
   <link href="https://fonts.googleapis.com/css2?family=Lemonada:wght@600&display=swap" rel="stylesheet">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+  <script src="https://unpkg.com/jquery"></script>
+  <link href="https://surveyjs.azureedge.net/1.8.11/modern.css" type="text/css" rel="stylesheet" />
+  <script src="https://surveyjs.azureedge.net/1.8.11/survey.jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
   <script src="/js/lib/easytimer.min.js"></script>
   <script src="/js/lib/phaser.min.js"></script>
   <script src="/js/lib/mmturkey.js"></script>
@@ -46,56 +48,88 @@
         </div>
     </div>
   </div>
+  <div style='display: none;' class="container" id="quiz-success">
+    <h1 class="font-weight-bold" style='text-align:center; margin:10%; color:chocolate;'>Succeded Attention Check Screen.</h1>
+    <h2 class="font-weight-bold" style='text-align:center; margin:10%; color:darkslategray;'>That is correct. You may now start the game. Good luck!</h2>
+    <a class="btn btn-primary btn-lg btn-block" id="join-room">
+      Click to Join Game Room
+    </a>
+  </div>
+  <div style='display: none;' class="container" id="quiz-fail">
+    <h1 class="font-weight-bold" style='text-align:center; margin:10%; color:chocolate;'>Failed Attention Check Screen.</h1>
+    <h2 class="font-weight-bold" style='text-align:center; margin:10%; color:darkslategray;'>That is incorrect. Please re-read the instructions carefully.</h2>
+    <a class="btn btn-primary btn-lg btn-block" id="revise-intructions">
+      Click to see instructions
+    </a>
+  </div>
   <div id="mainInfo" style="display: none; margin-top: 5%; margin-left: 5%; margin-bottom: 20%; margin-right:5%;">
         <div class="row">
           <div class="col">
-            <h3>
-              INSTRUCTIONS.
-            </h3>
+            <h2>
+              INSTRUCTIONS PAGE 1.
+            </h2>
+            <h3> Please pay attention to these task instructions, you will be asked questions to test your comprehension, and you won’t be able to start the task until you answer them accurately.</h3>
             <p>
-              There are three rooms at the end of each of the three hallways. One of these rooms has a victim.
-              You are teamed up with a knowledgeable leader who knows where the victim is but does not have the ability to save the victim.
-              Your goal is to save the victim in the number of rounds and time limit provided.
-            </p>
-            <ul>
-              <li>
-                A snapshot of the beginning of the game is shown on the right.
-              </li>
-              <li>
-                Each movement in any direction is counted as one round.
-              </li>
-              <li>
-                You can use the up, down, left, and right key for movement in the game.
-                Victims can be saved from any of the adjacent locations by pressing the “r” key.
-              </li>              
-              <li>
-                A room’s view is blocked until you reach its door indicated by the light blue square.
-                The victim is represented by the purple square.
-              </li>            
-            </ul>
-            <p>
-              You will be asked to play this game 5 different times. The entire experiment should take about 5 minutes.
+              You are a medic arriving at an office building after an earthquake. Your task is to save all of the people still in the building as quickly as possible. Unsaved victims are indicated by purple blocks, which turn yellow once you have successfully saved them. You save victims by pressing the “R”  key while standing next to them. You know that there is one victim in each room, but you don’t know where in the room the victim will be. The earthquake has caused structural damage to the building, so some paths that were previously traversable are now blocked, and some walls have collapsed to create new openings. You have access to the blueprints of the building prior to the earthquake. You have also used x-ray technology that helps you identify how the architecture has changed, but the earthquake has also interfered with your internet access so you might not have been able to download the full updated blueprint.
             </p>
             <div>
-              <a class="btn btn-primary btn-md" id="join-room">
-                Click to Join Game Room
+              <a class="btn btn-primary btn-md" id="continue-instructions">
+                Continue Instructions
               </a>
             </div>
           </div>
-          <div class="col">
-            <!-- <h3 style="text-align:center;">GAME VIEW IMAGE</h3> -->
-            <img src="/assets/gameMap.png" class="image-responsive" style="width: 100%;">
-          </div>
         </div>
-  </div>  
- 
-  <div style='display: none; justify-content: center; margin-top: 5%; margin' id='phaser-game'>
-    <div id="game-time">
-      <span id="sessionTitle">Game No: </span><span id='sessionId'></span><span id="timerTitle">  GAME TIMER:</span><span id='timerTime'></span>
-    </div> 
   </div>
+  <div id="mainInfo2" style="display: none; margin-top: 5%; margin-left: 5%; margin-bottom: 20%; margin-right:5%;">
+    <div class="row">
+      <div class="col">
+        <h2>
+          INSTRUCTIONS PAGE 2.
+        </h2>
+        <h3> Please pay attention to these task instructions, you will be asked questions to test your comprehension, 
+        and you won’t be able to start the task until you answer them accurately.</h3>
+        <p>To help you navigate the building, the blueprint will appear at the left of your screen as a minimap.
+        This minimap will not show where the victims are but may help you to plan your path through the building so 
+        you can find and save all the victims more quickly. The sections of the minimap that are based on the 
+        pre-earthquake blueprint (that may be unreliable) has a white background, whereas the sections that are 
+        based on the accurate post-earthquake blueprints have a grey background. Entryways into rooms are highlighted 
+        in blue, whereas rubble from the earthquake is highlighted in red. What section of the map uses what blueprint 
+        is randomised, so you might see a minimap with an entirely white background or an entirely grey background, or 
+        with different regions with different background colors. It is important that you pay attention so that you know 
+        how reliable the map is, and can plan accordingly.
+        </p>
+        <p>
+          There are 24 victims to save in total. You will see how many victims are left to save at the top of the screen. Good luck!
+        </p>
+        <div>
+          <a class="btn btn-primary btn-md" id="join-quiz">
+            Click to Start Quiz
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display: none;" id="surveyContainer"></div>
+<div id="game-screen" style='display: none;'>
+  <div id="game-time">
+    <span id="sessionTitle" style='display: none;'>Game No: </span><span id='sessionId' style='display: none;'></span><span id="timerTitle">  GAME TIMER:</span><span id='timerTime'></span>
+  </div>
+
+    <div class="grid-game-container">
+      <div class="grid-child-info" id='phaser-game-info'>
+          <div class="grid-info-container">
+              <h6 style="font-weight: 800; color: #3f3e42f1; padding-left: 1%;">Victim Count: <span id="victim-count" style="color: #a33c22f1"></span></h6>
+              <img class="phaser-game-legend" src="/assets/legend.png" width="450px">
+              <div id='phaser-game-info'></div>
+          </div>
+      </div>
+      <div class="grid-child-game" id='phaser-game'>
+      </div>
+  </div>
+</div>
+
   <h1 class="font-weight-bold" style='display:none; margin:20%;  text-align:center; color:darkslategray;' id='wait-room'>Waiting for other players to join</h1>
-  <h1 class="font-weight-bold" style='display:none; margin:20%;  text-align:center; color:darkslategray;' id='game-over'>Game Over!!</h1>
+  <h1 class="font-weight-bold" style='display:none; margin:20%;  text-align:center; color:darkslategray;' id='game-over'>Thank you! You can close this window</h1>
   <div style='display: none;' class="container" id="session-over">
     <h1 class="font-weight-bold" style='text-align:center; margin:10%; color:darkslategray;' id='session-message'>Session Completed</h1>
     <h2 class="font-weight-bold" style='text-align:center; margin:10%; color:chocolate;' id='session-completed'></h2>
@@ -103,5 +137,24 @@
       Click to Start Next Game
     </a>
   </div>
+  <div id='exp-close' style="display: none">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <h2>Thank you for participation. Please click the submit button to complete the experiment.</h2>
+            </div>
+        </div>
+        <div class="row form-group">
+            <div class="col-lg-12">
+                <h3>Comments(Optional):</h3>
+                <textarea class="form-control float-center" id="ta" name="feedbackText" cols="12" rows="3"></textarea>
+                <button type="submit" class="btn btn-primary btn-lg" id="feedbackSbmt" style="margin-top:5px">Submit</button>
+                <span id="statusCntr"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 </body>
 </html>
