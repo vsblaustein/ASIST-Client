@@ -1,3 +1,5 @@
+import {replay_moves} from "/js/index.js"
+
 // var phaserConfig = {
 //     type: Phaser.AUTO,
 //     width: 620,
@@ -310,20 +312,26 @@ var getMapData = function(){
 var getGameData = function(){
     //game time '00' or minutes like '2'. If it was '2' that is timer with deadline, gameTimeArg would be {precision: 'secondTenths', countdown: true, startValues: {minutes: gameTime}}
     let gameSetUpData = {"roundCount":0, "roundLimit":20000000, "playerX":5, "playerY":77, "playerName":"dude", "playerFrameWidth":32, 
-    "playerFrameHeight":48,"leaderName":null, "leaderDelay":null, "leaderX":null, "leaderY":null, 
+    "playerFrameHeight":48,"leaderName":"chirag", "leaderDelay":500, "leaderX":5, "leaderY":77, 
     gameTime:"00", gameTimeArg:{}}
     return gameSetUpData
 }
 
 var getRandomConfig = function(){
     var mapData = getMapData();
+    var count = 0;
     for (let ri in mapData.roomFloorMapping){
+        if (ri == "3707") continue;
         let length = mapData.roomFloorMapping[ri].length;
-        let randomVictimIdx = mapData.roomFloorMapping[ri][Math.floor(Math.random()*length)];
-        if (randomVictimIdx!=null){
+        //let randomVictimIdx = mapData.roomFloorMapping[ri][Math.floor(Math.random()*length)];
+        console.log("Door #: " + ri + " Random Victim Loc: " + replay_moves[0][count]);
+        mapData.victimIndexes.push(replay_moves[0][count]);
+        mapData.roomVictimMapping[ri].push(replay_moves[0][count]);
+        count++;
+        /*if (randomVictimIdx!=null){
             mapData.victimIndexes.push(randomVictimIdx);
             mapData.roomVictimMapping[ri].push(randomVictimIdx);
-        }
+        }*/
 
     }
     return [mapData.victimIndexes, mapData.roomVictimMapping]
@@ -336,40 +344,40 @@ const surveyJSON = {"title":"Instruction Attention Check",
 "pages": [{"name": "page1",
             "elements": [{"type": "radiogroup",
                     "name": "q1",
-                    "title": "What is your role?",
+                    "title": "What is the role of the avatar you will be watching?",
                     "isRequired":true,
-                    "choices": [{"value": "item1", "text": "You are a police man."},
-                                {"value": "item2", "text": "You are a fire fighter."},
-                                {"value": "item3", "text": "You are a soldier."},
-                                {"value": "correct", "text": "You are a medic."}],
+                    "choices": [{"value": "item1", "text": "They are a police man."},
+                                {"value": "item2", "text": "They are a fire fighter."},
+                                {"value": "item3", "text": "They are a soldier."},
+                                {"value": "correct", "text": "They are a medic."}],
                     "choicesOrder":"random"},
                     {"type": "radiogroup",
                     "name": "q2",
-                    "title": "How do you save people?",
+                    "title": "What is your job?",
                     "isRequired":true,
-                    "choices": [{"value": "correct", "text": "By standing next to them and pressing R."},
-                                {"value": "item2", "text": "By walking around them three times."},
-                                {"value": "item3", "text": "By clicking on them with the mouse."},
-                                {"value": "item4", "text": "By defeating all the monsters in the area."}],
+                    "choices": [{"value": "correct", "text": "To predict what information the avatar has access to, and what they will do next."},
+                                {"value": "item2", "text": "To memorize the path the avatar takes."},
+                                {"value": "item3", "text": "To indicate when the avatar makes a mistake."},
+                                {"value": "item4", "text": "To count how many victims the character saves."}],
                     "choicesOrder":"random"},
                     {"type": "radiogroup",
                     "name": "q3",
-                    "title": "What do you know about the placement of the victims?",
+                    "title": "What does the player you observe know about the placement of the victims at the start of the game?",
                     "isRequired":true,
-                    "choices": [{"value": "item1", "text": "The minimap will tell you where they are"},
-                                {"value": "correct", "text": "There is one victim in each room"},
-                                {"value": "item3", "text": "There are 10 victims in total"},
-                                {"value": "item4", "text": "Nothing, you have to find out as you explore the building"}],
+                    "choices": [{"value": "item1", "text": "That depends on what minimap they see."},
+                                {"value": "correct", "text": "There is one victim in each room."},
+                                {"value": "item3", "text": "There are 10 victims in total."},
+                                {"value": "item4", "text": "Nothing, you have to find out as you explore the building."}],
                     "choicesOrder":"random"},
-                    {"type": "radiogroup",
+                    /*{"type": "radiogroup",
                     "name": "q4",
                     "title": "What does a grey background on the minimap mean?",
                     "isRequired":true,
-                    "choices": [{"value": "correct", "text": "That you have accurate information of blockages and openings for that section of the building"},
-                                {"value": "item2", "text": "That you know where the victims are for that section of the building"},
+                    "choices": [{"value": "correct", "text": "That the player has accurate information of blockages and openings for that section of the building"},
+                                {"value": "item2", "text": "That the player knows where the victims are for that section of the building"},
                                 {"value": "item3", "text": "That there has been a fire in that section"},
-                                {"value": "item4", "text": "That you don’t have any up-to-date information for that section of the building"}],
-                    "choicesOrder":"random"}
+                                {"value": "item4", "text": "That the player doesn’t have any up-to-date information for that section of the building"}],
+                    "choicesOrder":"random"}*/
                 ]
             }],
 "questionsOrder":"random",

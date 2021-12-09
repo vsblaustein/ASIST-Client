@@ -217,10 +217,14 @@ class GameState {
     }
 
 
-    getVictimRescueIndexes(x,y){
+    getVictimRescueIndexes(yCoord, xCoord){
         let rescueIndexes = new Array();
-        for(let i=x-1; i<=x+1; i++){
-            for(let j=y-1; j<=y+1; j++){
+        let x = parseInt(xCoord);
+        let y = parseInt(yCoord);
+        for(var i=y-1; i<=y+1; i++){
+            for(var j=x-1; j<=x+1; j++){
+                console.log("i: " + i + " j: " + j + " cols: " + this.config.cols);
+                console.log("x: " + x + " y: " + y);
                 rescueIndexes.push((i*this.config.cols)+j);
             }
         }
