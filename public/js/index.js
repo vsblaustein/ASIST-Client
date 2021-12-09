@@ -1,23 +1,26 @@
 import {actExpSmryBtn, endSession, startSession, joinQuiz, changeDisplay} from "/js/expNav.js";
 import {PlayerDisplay, GameState, NavigationMap} from "/js/gameUtils.js"
-import {phaserConfig, getMapData, getGameData, getSocketURL, getRandomConfig, getNavigationMapData} from "/js/config.js"
+import {phaserConfig, getMapData, getGameData, getSocketURL, getRandomConfig, getCSVConfig, getNavigationMapData} from "/js/config.js"
 
 
 var roomIdx = "na";
 var playerId = "na";
+var leaderId = "1";
 var socketId = "na";
 var gameTimer = new Timer();
 var sessionId = 1;
 var sessionLimit = 1;
 var victimCount;
 var feedback_str = "No Feedback Given";
-const socket = io(getSocketURL(), {transports: ['websocket']})
+var replay_moves = new Array();
+const socket = io(socketURL, {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
     initialize: function(){
         console.log("GamePlay init");
         Phaser.Scene.call(this, {key: 'GamePlay'});
         socket.on('player_move_success', (message)=>{this._playersMovementDisplay(message)});
+        socket.on('victim_save_success', (message)=>{this._victimSave(message)});
 
         gameTimer.addEventListener('targetAchieved', ()=>{
             this.input.keyboard.removeAllKeys()
@@ -54,15 +57,31 @@ var gamePlayState = new Phaser.Class({
         this.load.spritesheet(this.gameConfig["playerName"], "/assets/"+this.gameConfig["playerName"]+".png",
         {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
     },
-    create: function() {
+
+    create: async function() {
+        replay_moves = await this._parseCSV();
+        let randomSelectionValues = getCSVConfig();
+            if (randomSelectionValues!=null){
+                this._updateGameConfig(randomSelectionValues)
+            }
+        victimCount = this.mapConfig["victimIndexes"].length;
+
         console.log("GamePlay create");
         this.gameState = new GameState(this.mapConfig, this)
+        
+        /*
+        console.log("Replay length", replay_moves.length)
+        for(let i = 0; i < replay_moves.length; i++) {
+            for(let j = 0; j < replay_moves[i].length; j++) {
+                console.log(replay_moves[i][j]);
+            }
+        }*/
 
         this.playerList = Array();
         this.playersCurrentLoc = Array();
-        this.playerDude = new PlayerDisplay(this, {"x": this.gameConfig.playerX, "y":this.gameConfig.playerY, "name":this.gameConfig["playerName"]});
-        this.playersCurrentLoc.push((this.playerDude.y*this.mapConfig.cols)+ this.playerDude.x);
-        this.playerList.push(this.playerDude);
+        //this.playerDude = new PlayerDisplay(this, {"x": this.gameConfig.playerX, "y":this.gameConfig.playerY, "name":this.gameConfig["playerName"]});
+        //this.playersCurrentLoc.push((this.playerDude.y*this.mapConfig.cols)+ this.playerDude.x);
+        this.playerList.push(null);
 
         gameTimer.start(this.gameConfig["gameTimeArg"])
 
@@ -75,13 +94,13 @@ var gamePlayState = new Phaser.Class({
                 callback: this._leaderAnimation,
                 args: [],
                 callbackScope: this,
-                repeat: this.gameConfig.leaderMovementIndexes.length - 1
+                repeat: replay_moves.length - 1
             });
         }
 
         this.cameras.main.setBounds(0, 0, 775, 625).setName('main');
         this.cameras.main.setZoom(4);
-        this.cameras.main.startFollow(this.playerDude.physicsObj);
+        this.cameras.main.startFollow(this.leaderDude.physicsObj);
         this.cameras.main.setLerp(0.2);
 
         var keys = this.input.keyboard.addKeys('UP, DOWN, RIGHT, LEFT, R')
@@ -93,9 +112,9 @@ var gamePlayState = new Phaser.Class({
         keys.R.on('down', ()=>{this._victimSave()});
     },
     _playersMovementDisplay (message){
-        let newIdx = (message["y"]*this.mapConfig.cols)+ message["x"]
+        let newIdx = ((parseInt(message["y"]))*this.mapConfig.cols)+ parseInt(message["x"])
         console.log(message["x"], message["y"], message["p_id"], newIdx)
-        if (message["p_id"] == playerId){
+        if (message["p_id"] == leaderId){
             this.gameConfig.roundCount = message["r"];
             if (this.mapConfig.doorIndexes.includes(newIdx)){
                 for (let roomIndex of this.mapConfig.doorRoomMapping[newIdx]){
@@ -122,32 +141,65 @@ var gamePlayState = new Phaser.Class({
         }
     },
     _leaderAnimation: function(){
-        let currentLeaderloc = this.gameConfig.leaderMovementIndexes.length - (this.leaderTimer.getRepeatCount()+1)
-        socket.emit("player_move", {'x': this.gameConfig.leaderMovementIndexes[currentLeaderloc][0], 'y': this.gameConfig.leaderMovementIndexes[currentLeaderloc][1],
-        "s_id":sessionId, "socket_id":socketId, "event":this.gameConfig.leaderMovementIndexes[currentLeaderloc][2], "aws_id": turk.emit(),'rm_id':roomIdx,
-        'p_id': 1, "input_time":new Date().toISOString()
-    })
+        let currentLeaderloc = replay_moves.length - (this.leaderTimer.getRepeatCount())
+        if (replay_moves[currentLeaderloc][2] == "rs"){
+            console.log("entered if rs")
+            socket.emit("rescue_success", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
+            "s_id":sessionId, "socket_id":socketId, "event":replay_moves[currentLeaderloc][2], "aws_id": turk.emit(),'rm_id':roomIdx,
+            'p_id': 1, "input_time":new Date().toISOString() 
+            })
+        }else{
+            socket.emit("player_move", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
+            "s_id":sessionId, "socket_id":socketId, "event":replay_moves[currentLeaderloc][2], "aws_id": turk.emit(),'rm_id':roomIdx,
+            'p_id': 1, "input_time":new Date().toISOString()
+            })
+        }
         if (this.leaderTimer.getRepeatCount()===0){
             console.log(this.playersCurrentLoc);
         }
     },
+
+   /* _leaderInRoom: function(x, y){
+        let newIdx = (y*this.mapConfig.cols)+ x;
+        if (this.mapConfig.doorIndexes.includes(newIdx)){
+            this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[String(newIdx)]);
+            this.gameState.makeRoomVisible(this.gameState.roomViewObj[String(newIdx)]);
+        }else if (this.mapConfig.gapIndexes.includes(newIdx)){
+            for (let roomIndex in this.mapConfig.roomGapMapping){
+                if(this.mapConfig.roomGapMapping[roomIndex].includes(newIdx)){
+                    console.log("Entered room " + roomIndex 
+                    + " through gap");
+                    this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[roomIndex]);
+                    this.gameState.makeRoomVisible(this.gameState.roomViewObj[roomIndex]);
+                }
+            }
+        }
+    },*/
+
     _victimSave(){
-        let rescueIndexes = this.gameState.getVictimRescueIndexes(this.playerList[playerId].y, this.playerList[playerId].x);
-        socket.emit("rescue_attempt", {'x': this.playerList[playerId].x, 'y': this.playerList[playerId].y,"event":"r", "aws_id": turk.emit(), 'rm_id':roomIdx,
-        'p_id': playerId, "socket_id":socketId, "victims_alive": Array.from(this.gameState.set_victims), "time":new Date().toISOString()})
+        console.log("reached victim save function")
+        console.log("x coord: " + this.playerList[leaderId].x + " y coord: " + this.playerList[leaderId].y);
+        let rescueIndexes = this.gameState.getVictimRescueIndexes(this.playerList[leaderId].y, this.playerList[leaderId].x);
+        /*socket.emit("rescue_attempt", {'x': this.playerList[leaderId].x, 'y': this.playerList[leaderId].y,"event":"r", "aws_id": turk.emit(), 'rm_id':roomIdx,
+        'p_id': leaderId, "socket_id":socketId, "victims_alive": Array.from(this.gameState.set_victims), "time":new Date().toISOString()})*/
+        console.log("Set victims: " + this.gameState.set_victims);
+        console.log("Rescue index: " + rescueIndexes);
         for(const victimIndex of this.gameState.set_victims){
-            if (rescueIndexes.includes(victimIndex)){
+            console.log("victim index: " + victimIndex);
+            if (rescueIndexes.includes(parseInt(victimIndex))){
+                console.log("victim in rescue indexes");
                 if (this.gameState.set_victims.has(victimIndex)){
-                    socket.emit("rescue_success", {'x': this.playerList[playerId].x, 'y': this.playerList[playerId].y,
-                    "event":"rs", "aws_id": turk.emit(), 'rm_id':roomIdx, "socket_id":socketId, 'p_id': playerId, "victims_alive": Array.from(this.gameState.set_victims),
-                    "victim":victimIndex, "time":new Date().toISOString()})
+                    /*socket.emit("rescue_success", {'x': this.playerList[leaderId].x, 'y': this.playerList[leaderId].y,
+                    "event":"rs", "aws_id": turk.emit(), 'rm_id':roomIdx, "socket_id":socketId, 'p_id': leaderId, "victims_alive": Array.from(this.gameState.set_victims),
+                    "victim":victimIndex, "time":new Date().toISOString()})*/
+                    console.log("change victim color");
                     this.gameState.victimObj[String(victimIndex)].fillColor = "0xf6fa78";
                     this.gameState.set_victims.delete(victimIndex);
                     victimCount = this.gameState.set_victims.size
                     if (this.gameState.set_victims.size === 0){
                         console.log("SUCCESS")
                         this.input.keyboard.removeAllKeys()
-                        sessionId = endSession(game, socket, gameTimer, playerId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+                        sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
                     }
                 }
             }
@@ -166,6 +218,33 @@ var gamePlayState = new Phaser.Class({
     _updateGameConfig: function(randomSelectionValues){
         this.mapConfig["victimIndexes"] = randomSelectionValues[0]
         this.mapConfig["roomVictimMapping"] = randomSelectionValues[1]
+    },
+
+    _parseCSV: async function(){
+        var replay_data = new Array()
+        const data = await fetch('assets/game4updated.csv').then(response => response.text())
+        var counter = 0
+        Papa.parse(data, {
+            header: true,
+            complete: function(results){
+                results.data.map((data, index) =>{
+                    var coords = new Array();
+                    if (counter == 0){
+                        var victim_loc = new Array();
+                        victim_loc = (data.random_victims_locations.substring(1, data.random_victims_locations.length-1)).split(", ");
+                        replay_data.push(victim_loc);
+                        counter = counter + 1;
+                    }
+                    coords.push(data.x);
+                    coords.push(data.z);
+                    coords.push(data.event);
+                    replay_data.push(coords);
+                });
+            }
+        });
+        console.log("Replay length", replay_data.length)
+        return replay_data
+
     }
 });
 
@@ -255,6 +334,7 @@ const gameInformation = new Phaser.Game({
     backgroundColor:0xffffff,
     scale: {
         _mode: Phaser.Scale.FIT,
+        //autoCenter: Phaser.Scale.CENTER_BOTH,
         parent: 'phaser-game-info',
         //set the width of legend.png img block same as this width
         width: 450,
@@ -340,3 +420,6 @@ socket.on('start_game', (message)=>{
     console.log(message)
     startSession(game, socket, gameInformation, "#wait-room", "#game-screen", "#sessionId", message);
 });
+
+
+export {replay_moves};

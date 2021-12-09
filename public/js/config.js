@@ -1,3 +1,5 @@
+import {replay_moves} from "/js/index.js"
+
 var phaserConfig = {
     type: Phaser.AUTO,
     backgroundColor:0xffffff,
@@ -56,10 +58,31 @@ var getNavigationMapData = function(){
 var getGameData = function(){
     //game time '00' or minutes like '2'. If it was '2' that is timer with deadline, gameTimeArg would be {precision: 'secondTenths', countdown: true, startValues: {minutes: gameTime}}
     let gameSetUpData = {"roundCount":0, "roundLimit":20000000, "playerX":5, "playerY":75, "playerName":"dude", "playerFrameWidth":32,
-    "playerFrameHeight":48,"leaderName":null, "leaderDelay":null, "leaderX":null, "leaderY":null, 
+    "playerFrameHeight":48,"leaderName":"chirag", "leaderDelay":500, "leaderX":5, "leaderY":75, 
     gameTime:"00", gameTimeArg:{}}
     return gameSetUpData
 }
+
+
+var getCSVConfig = function(){
+    var mapData = getMapData();
+    var count = 0;
+    for (let ri in mapData.roomFloorMapping){
+        if (ri == "3707") continue;
+        let length = mapData.roomFloorMapping[ri].length;
+    }
+    //let randomVictimIdx = mapData.roomFloorMapping[ri][Math.floor(Math.random()*length)];
+    console.log("Door #: " + ri + " Random Victim Loc: " + replay_moves[0][count]);
+    mapData.victimIndexes.push(replay_moves[0][count]);
+    mapData.roomVictimMapping[ri].push(replay_moves[0][count]);
+    count++;
+    /*if (randomVictimIdx!=null){
+        mapData.victimIndexes.push(randomVictimIdx);
+        mapData.roomVictimMapping[ri].push(randomVictimIdx);
+    }*/
+    return [mapData.victimIndexes, mapData.roomVictimMapping]
+}
+
 
 var getRandomConfig = function(){
     var mapData = getMapData();
@@ -69,6 +92,7 @@ var getRandomConfig = function(){
         roomVictimMapping[ri] = new Array();
     }
     for (let ri in mapData.roomFloorMapping){
+        if (ri == "3707") continue;
         let length = mapData.roomFloorMapping[ri].length;
         let randomVictimIdx = mapData.roomFloorMapping[ri][Math.floor(Math.random()*length)];
         if (randomVictimIdx!=null){
@@ -120,5 +144,5 @@ var getSocketURL = function (){
 }
 
 
-export {phaserConfig, getMapData, getGameData, getSocketURL, getRandomConfig, getSurveyJson, getNavigationMapData};
+export {phaserConfig, getMapData, getGameData, getSocketURL, getRandomConfig, getCSVConfig, getSurveyJson, getNavigationMapData};
 
