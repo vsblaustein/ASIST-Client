@@ -2,18 +2,28 @@ const express = require('express');
 const path = require('path');
 const app = express();
 const public = path.join(__dirname, '/public');
+var replay = true;
 app.use('/', express.static(public));
 
 const game_config = require('./config/game-map_v0.1.json');
 console.log("MapCols:", game_config.cols + ' | MapRows:' + game_config.rows)
 
-const survey_config = require('./config/survey_replays.json');
+var survey_config = require('./config/survey_v0.1.json');
+if(replay){
+    survey_config = require('./config/survey_replays.json');
+}
 
 const navigation_config = require('./config/navigation-map_v0.1.json');
 
-app.get('/', function(req, res) {
-    res.sendFile(path.join(public , 'index.html'));
-});
+//if (replay){
+    app.get('/', function(req, res) {
+        res.sendFile(path.join(public , 'index.html'));
+    }); 
+/*}else{
+    app.get('/', function(req, res) {
+        res.sendFile(path.join(public , 'index.html'));
+    });
+}*/
 
 app.get('/socket_url', function(req, res){
     console.log('socket-url route called');

@@ -13,14 +13,193 @@ var sessionLimit = 1;
 var victimCount;
 var feedback_str = "No Feedback Given";
 var replay_moves = new Array();
-const socket = io(socketURL, {transports: ['websocket']})
+var replay = true;
+const socket = io(getSocketURL(), {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
     initialize: function(){
         console.log("GamePlay init");
         Phaser.Scene.call(this, {key: 'GamePlay'});
         socket.on('player_move_success', (message)=>{this._playersMovementDisplay(message)});
-        socket.on('victim_save_success', (message)=>{this._victimSave(message)});
+        socket.on('rescue_success', (message)=>{this._rescueDisplay(message)});
+
+        gameTimer.addEventListener('targetAchieved', ()=>{
+            this.input.keyboard.removeAllKeys()
+            sessionId = endSession(game, socket, gameTimer, playerId, roomIdx, sessionId, turk.emit(), socketId, "go_time", sessionLimit, "Game Time Over")
+        });
+
+        gameTimer.addEventListener('secondTenthsUpdated', function() {
+            $('#timerTime').text(" "+ gameTimer.getTimeValues().toString());
+        });
+
+        // gameTimer.addEventListener('started', function () {
+        //         $('#timerTime').text(" 00:"+String(this.gameConfig[gameTime])+":00");
+        // });
+
+    },
+    preload: function() {
+        console.log("GamePlay preload");
+        this.mapConfig = getMapData();
+        this.gameConfig = getGameData();
+        let randomSelectionValues = getRandomConfig(roomIdx);
+        if (randomSelectionValues!=null){
+            this._updateGameConfig(randomSelectionValues)
+        }
+        victimCount = this.mapConfig["victimIndexes"].length;
+        var initializedGameData = {"event":"game_created", "map_config": this.mapConfig, "game_config":this.gameConfig, "time":new Date().toISOString(),
+            globalVariable:{"rm_id":roomIdx, "p_id":playerId, "aws_id": turk.emit(),"socket_id": socketId, "session_id":sessionId, "session_limit":sessionLimit}}
+        socket.emit("game_config", initializedGameData);
+
+        if (this.gameConfig["leaderName"]!=null){
+            this.load.spritesheet(this.gameConfig["leaderName"], "/assets/"+this.gameConfig["leaderName"]+".png",
+            {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
+        }
+
+        for (let i = 0; i < this.gameConfig.players.length; ++i) {
+            let player = this.gameConfig.players[i];
+            this.load.spritesheet(player["playerName"], "/assets/"+player["playerName"]+".png",
+            {frameWidth: player["playerFrameWidth"], frameHeight: player["playerFrameHeight"]});
+        }
+    },
+    create: function() {
+        console.log("GamePlay create");
+        this.gameState = new GameState(this.mapConfig, this)
+
+        this.playerList = Array();
+        this.playersCurrentLoc = Array();
+        for (let i = 0; i < this.gameConfig.players.length; ++i) {
+            let player = this.gameConfig.players[i];
+            let playerDude = new PlayerDisplay(this, {"x": player.playerX, "y":player.playerY, "name":player.playerName});
+            this.playersCurrentLoc.push((playerDude.y*this.mapConfig.cols)+ playerDude.x);
+            this.playerList.push(playerDude);
+        }
+
+        gameTimer.start(this.gameConfig["gameTimeArg"])
+
+        if (this.gameConfig["leaderX"]!=null){
+            this.leaderDude = new PlayerDisplay(this, {"x": this.gameConfig.leaderX, "y":this.gameConfig.leaderY, "name":this.gameConfig["leaderName"]});
+            this.playersCurrentLoc.push((this.leaderDude.y*this.mapConfig.cols)+ this.leaderDude.x);
+            this.playerList.push(this.leaderDude);
+            this.leaderTimer = this.time.addEvent({
+                delay: this.gameConfig["leaderDelay"],
+                callback: this._leaderAnimation,
+                args: [],
+                callbackScope: this,
+                repeat: this.gameConfig.leaderMovementIndexes.length - 1
+            });
+        }
+
+        this.cameras.main.setBounds(0, 0, 775, 625).setName('main');
+        this.cameras.main.setZoom(4);
+        this.cameras.main.startFollow(this.playerList[playerId].physicsObj);
+        this.cameras.main.setLerp(0.2);
+
+        var keys = this.input.keyboard.addKeys('UP, DOWN, RIGHT, LEFT, R')
+        this.input.keyboard.preventDefault = false
+        keys.UP.on('down', ()=>{this._playerMove(this.playerList[playerId].x, this.playerList[playerId].y - 1, "up")});
+        keys.DOWN.on('down', ()=>{this._playerMove(this.playerList[playerId].x, this.playerList[playerId].y + 1, "down")});
+        keys.RIGHT.on('down', ()=>{this._playerMove(this.playerList[playerId].x + 1, this.playerList[playerId].y, "right")});
+        keys.LEFT.on('down', ()=>{this._playerMove(this.playerList[playerId].x - 1, this.playerList[playerId].y, "left")});
+        keys.R.on('down', ()=>{this._victimSave()});
+    },
+    _playersMovementDisplay (message){
+        let newIdx = (message["y"]*this.mapConfig.cols)+ message["x"]
+        console.log(message["x"], message["y"], message["p_id"], newIdx)
+        if (message["p_id"] == playerId){
+            this.gameConfig.roundCount = message["r"];
+            if (this.mapConfig.doorIndexes.includes(newIdx)){
+                for (let roomIndex of this.mapConfig.doorRoomMapping[newIdx]){
+                    this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[String(roomIndex)], this.gameState.set_victims);
+                    this.gameState.makeRoomVisible(this.gameState.roomViewObj[roomIndex]);
+                }
+            }else if (this.mapConfig.gapIndexes.includes(newIdx)){
+                for (let roomIndex of this.mapConfig.gapRoomMapping[newIdx]){
+                    this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[String(roomIndex)], this.gameState.set_victims);
+                    this.gameState.makeRoomVisible(this.gameState.roomViewObj[String(roomIndex)]);
+                }
+            }
+        }
+        this.playersCurrentLoc[message["p_id"]] = newIdx
+        this.playerList[message["p_id"]].move(message["x"], message["y"], message["event"])
+
+        message["display_p_id"] = playerId;
+        message["time"] = new Date().toISOString();
+        message["socket_id"] = socketId;
+        socket.emit("player_move_displayed", message);
+        if (this.gameConfig.roundLimit - this.gameConfig.roundCount <= 0){
+            this.input.keyboard.removeAllKeys()
+            sessionId = endSession(game, socket, gameTimer, playerId, roomIdx, sessionId, turk.emit(),  socketId, "go_round", sessionLimit, "All Rounds Used")
+        }
+    },
+    _leaderAnimation: function(){
+        let currentLeaderloc = this.gameConfig.leaderMovementIndexes.length - (this.leaderTimer.getRepeatCount()+1)
+        socket.emit("player_move", {'x': this.gameConfig.leaderMovementIndexes[currentLeaderloc][0], 'y': this.gameConfig.leaderMovementIndexes[currentLeaderloc][1],
+        "s_id":sessionId, "socket_id":socketId, "event":this.gameConfig.leaderMovementIndexes[currentLeaderloc][2], "aws_id": turk.emit(),'rm_id':roomIdx,
+        'p_id': 1, "input_time":new Date().toISOString()
+    })
+        if (this.leaderTimer.getRepeatCount()===0){
+            console.log(this.playersCurrentLoc);
+        }
+    },
+    _victimSave(){
+        console.log("victim save reached");
+        let rescueIndexes = this.gameState.getVictimRescueIndexes(this.playerList[playerId].y, this.playerList[playerId].x);
+        socket.emit("rescue_attempt", {'x': this.playerList[playerId].x, 'y': this.playerList[playerId].y,"event":"r", "aws_id": turk.emit(), 'rm_id':roomIdx,
+        'p_id': playerId, "socket_id":socketId, "victims_alive": Array.from(this.gameState.set_victims), "time":new Date().toISOString()})
+        for(const victimIndex of this.gameState.set_victims){
+            if (rescueIndexes.includes(victimIndex)){
+                if (this.gameState.set_victims.has(victimIndex)){
+                    console.log("victim found");
+                    socket.emit("rescue", {'x': this.playerList[playerId].x, 'y': this.playerList[playerId].y,
+                    "event":"rs", "aws_id": turk.emit(), 'rm_id':roomIdx, "socket_id":socketId, 'p_id': playerId, "victims_alive": Array.from(this.gameState.set_victims),
+                    "victim":victimIndex, "time":new Date().toISOString()})
+                }
+            }
+        }
+    },
+
+    _rescueDisplay (message){
+        console.log("rescue display reached");
+        let victimIndex = message["victim"];
+        if (this.gameState.set_victims.has(victimIndex)){
+            socket.emit("rescue_displayed", {'x': this.playerList[playerId].x, 'y': this.playerList[playerId].y,
+            "event":"rs", "aws_id": turk.emit(), 'rm_id':roomIdx, "socket_id":socketId, 'p_id': playerId, "victims_alive": Array.from(this.gameState.set_victims),
+            "victim":victimIndex, "time":new Date().toISOString()})
+            this.gameState.victimObj[String(victimIndex)].fillColor = "0xf6fa78";
+            this.gameState.set_victims.delete(victimIndex);
+            victimCount = this.gameState.set_victims.size
+            if (this.gameState.set_victims.size === 0){
+                console.log("SUCCESS")
+                this.input.keyboard.removeAllKeys()
+                sessionId = endSession(game, socket, gameTimer, playerId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+            }
+        }
+    },
+
+    _playerMove: function(x, y, direction){
+        console.log(x,y, direction);
+        let newIdx = (y*this.mapConfig.cols)+ x;
+        if (!(this.gameState.noRoadIndex.has(newIdx)) && !(this.playersCurrentLoc.includes(newIdx)) && (this.gameConfig.roundLimit - this.gameConfig.roundCount >0)){
+            socket.emit("player_move", {'x': x, 'y': y, "s_id":sessionId, "socket_id":socketId,
+                "event":direction, "aws_id": turk.emit(), 'rm_id':roomIdx, 'p_id': playerId, "input_time":new Date().toISOString(),
+                "r": this.gameConfig.roundCount + 1
+            });
+        }
+    },
+    _updateGameConfig: function(randomSelectionValues){
+        this.mapConfig["victimIndexes"] = randomSelectionValues[0]
+        this.mapConfig["roomVictimMapping"] = randomSelectionValues[1]
+    }
+});
+
+
+var replayState = new Phaser.Class({
+    Extends: Phaser.Scene,
+    initialize: function(){
+        console.log("GamePlay init");
+        Phaser.Scene.call(this, {key: 'GamePlay'});
+        socket.on('player_move_success', (message)=>{this._playersMovementDisplay(message)});
+        socket.on('victim_save_success', (message)=>{this._leaderVictimSave(message)});
 
         gameTimer.addEventListener('targetAchieved', ()=>{
             this.input.keyboard.removeAllKeys()
@@ -54,8 +233,8 @@ var gamePlayState = new Phaser.Class({
             {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
         }
 
-        this.load.spritesheet(this.gameConfig["playerName"], "/assets/"+this.gameConfig["playerName"]+".png",
-        {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
+        /*this.load.spritesheet(this.gameConfig["playerName"], "/assets/"+this.gameConfig["playerName"]+".png",
+        {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});*/
     },
 
     create: async function() {
@@ -144,9 +323,10 @@ var gamePlayState = new Phaser.Class({
         let currentLeaderloc = replay_moves.length - (this.leaderTimer.getRepeatCount())
         if (replay_moves[currentLeaderloc][2] == "rs"){
             console.log("entered if rs")
+            console.log("victim index in leaderAnimation: " + replay_moves[currentLeaderloc][3])
             socket.emit("rescue_success", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
             "s_id":sessionId, "socket_id":socketId, "event":replay_moves[currentLeaderloc][2], "aws_id": turk.emit(),'rm_id':roomIdx,
-            'p_id': 1, "input_time":new Date().toISOString() 
+            'p_id': 1, 'victim':replay_moves[currentLeaderloc][3], "input_time":new Date().toISOString() 
             })
         }else{
             socket.emit("player_move", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
@@ -158,36 +338,31 @@ var gamePlayState = new Phaser.Class({
             console.log(this.playersCurrentLoc);
         }
     },
-
-   /* _leaderInRoom: function(x, y){
-        let newIdx = (y*this.mapConfig.cols)+ x;
-        if (this.mapConfig.doorIndexes.includes(newIdx)){
-            this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[String(newIdx)]);
-            this.gameState.makeRoomVisible(this.gameState.roomViewObj[String(newIdx)]);
-        }else if (this.mapConfig.gapIndexes.includes(newIdx)){
-            for (let roomIndex in this.mapConfig.roomGapMapping){
-                if(this.mapConfig.roomGapMapping[roomIndex].includes(newIdx)){
-                    console.log("Entered room " + roomIndex 
-                    + " through gap");
-                    this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[roomIndex]);
-                    this.gameState.makeRoomVisible(this.gameState.roomViewObj[roomIndex]);
-                }
-            }
+    _leaderVictimSave(message){
+        let victimIndex = parseInt(message["victim"])
+        console.log("victim index in leader victim save: " + victimIndex);
+        console.log("change victim color");
+        this.gameState.victimObj[String(victimIndex)].fillColor = "0xf6fa78";
+        this.gameState.set_victims.delete(victimIndex);
+        victimCount = this.gameState.set_victims.size
+        if (this.gameState.set_victims.size === 0){
+            console.log("SUCCESS")
+            this.input.keyboard.removeAllKeys()
+            sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
         }
-    },*/
-
+    },
     _victimSave(){
         console.log("reached victim save function")
         console.log("x coord: " + this.playerList[leaderId].x + " y coord: " + this.playerList[leaderId].y);
         let rescueIndexes = this.gameState.getVictimRescueIndexes(this.playerList[leaderId].y, this.playerList[leaderId].x);
         /*socket.emit("rescue_attempt", {'x': this.playerList[leaderId].x, 'y': this.playerList[leaderId].y,"event":"r", "aws_id": turk.emit(), 'rm_id':roomIdx,
         'p_id': leaderId, "socket_id":socketId, "victims_alive": Array.from(this.gameState.set_victims), "time":new Date().toISOString()})*/
-        console.log("Set victims: " + this.gameState.set_victims);
         console.log("Rescue index: " + rescueIndexes);
+        console.log("Set victims: " + Array.from(this.gameState.set_victims.values()));
+        
         for(const victimIndex of this.gameState.set_victims){
-            console.log("victim index: " + victimIndex);
             if (rescueIndexes.includes(parseInt(victimIndex))){
-                console.log("victim in rescue indexes");
+                console.log("victim index: " + victimIndex);
                 if (this.gameState.set_victims.has(victimIndex)){
                     /*socket.emit("rescue_success", {'x': this.playerList[leaderId].x, 'y': this.playerList[leaderId].y,
                     "event":"rs", "aws_id": turk.emit(), 'rm_id':roomIdx, "socket_id":socketId, 'p_id': leaderId, "victims_alive": Array.from(this.gameState.set_victims),
@@ -222,7 +397,7 @@ var gamePlayState = new Phaser.Class({
 
     _parseCSV: async function(){
         var replay_data = new Array()
-        const data = await fetch('assets/game4updated.csv').then(response => response.text())
+        const data = await fetch('assets/allKnowledge_game2_DHyRxQn7XmZXMfZqAAAd.csv').then(response => response.text())
         var counter = 0
         Papa.parse(data, {
             header: true,
@@ -238,6 +413,9 @@ var gamePlayState = new Phaser.Class({
                     coords.push(data.x);
                     coords.push(data.z);
                     coords.push(data.event);
+                    if (data.event == "rs"){
+                        coords.push(data.victim)
+                    }
                     replay_data.push(coords);
                 });
             }
@@ -249,9 +427,12 @@ var gamePlayState = new Phaser.Class({
 });
 
 console.log("Game Object");
-const game = new Phaser.Game(phaserConfig); //Instantiate the game
-game.scene.add("Gameplay", gamePlayState);
-
+const expObj = new Phaser.Game(phaserConfig); //Instantiate the game
+if (replay){
+    expObj.scene.add("Replay", replayState);
+} else {
+    expObj.scene.add("Gameplay", gamePlayState);
+}
 
 var gameInfoState = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -303,7 +484,7 @@ var gameInfoState = new Phaser.Class({
             this.bl = "noKnowledgeCondition";
             this.br = "noKnowledgeCondition";
             if(Math.random() < .3){ // first randomization
-                if (Math.random() < .5){ // post accident*/
+                if (Math.random() < .5){ // post accident
                     this.tl = "knowledgeCondition";
                     this.tr = "knowledgeCondition";
                     this.bl = "knowledgeCondition";
@@ -329,6 +510,22 @@ var gameInfoState = new Phaser.Class({
     },
 });
 
+var replayInfoState = new Phaser.Class({
+    Extends: Phaser.Scene,
+    initialize: function(){
+        Phaser.Scene.call(this, {key: 'GameInfo'});
+    },
+    preload: function() {
+
+    },
+    create: function() {
+        $('#victim-count').text(victimCount)
+    },
+    update: function() {
+        $('#victim-count').text(victimCount)
+    },
+});
+
 const gameInformation = new Phaser.Game({
     type: Phaser.AUTO,
     backgroundColor:0xffffff,
@@ -345,7 +542,11 @@ const gameInformation = new Phaser.Game({
     },
 });
 
-gameInformation.scene.add("GameInfo", gameInfoState);
+if (replay){
+    gameInformation.scene.add("GameInfo", replayInfoState);
+}else{ 
+    gameInformation.scene.add("GameInfo", gameInfoState);
+}
 
 
 socket.on('connect',()=>{
@@ -385,7 +586,7 @@ $(document).ready(function() {
     });
 
     $('#start-session').on("click", function(){
-        startSession(game, socket, "#session-over", "#game-screen", "#sessionId", {"event":"start_game", "s_id": sessionId, "aws_id": turk.emit(), 'rm_id':roomIdx,
+        startSession(expObj, socket, "#session-over", "#game-screen", "#sessionId", {"event":"start_game", "s_id": sessionId, "aws_id": turk.emit(), 'rm_id':roomIdx,
         'p_id': playerId, "socket_id":socketId});
     });
 
@@ -418,7 +619,7 @@ socket.on('start_game', (message)=>{
     message["socket_id"] = socketId
     message["aws_id"] = turk.emit()
     console.log(message)
-    startSession(game, socket, gameInformation, "#wait-room", "#game-screen", "#sessionId", message);
+    startSession(expObj, socket, gameInformation, "#wait-room", "#game-screen", "#sessionId", message);
 });
 
 
