@@ -13,7 +13,7 @@ var sessionLimit = 1;
 var victimCount;
 var feedback_str = "No Feedback Given";
 var replay_moves = new Array();
-var replay = true;
+var replay = false;
 const socket = io(getSocketURL(), {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -50,6 +50,7 @@ var gamePlayState = new Phaser.Class({
             globalVariable:{"rm_id":roomIdx, "p_id":playerId, "aws_id": turk.emit(),"socket_id": socketId, "session_id":sessionId, "session_limit":sessionLimit}}
         socket.emit("game_config", initializedGameData);
 
+        console.log("frame width: " + this.gameConfig["leaderFrameWidth"]);
         if (this.gameConfig["leaderName"]!=null){
             this.load.spritesheet(this.gameConfig["leaderName"], "/assets/"+this.gameConfig["leaderName"]+".png",
             {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
@@ -562,8 +563,12 @@ socket.on('welcome',(message)=>{
 $(document).ready(function() {
     $("#agree").change(actExpSmryBtn);
     $("#cte").on("click", function(){
-        if ($("#agree").prop('checked') == true) {
-            changeDisplay(socket, "game_info" ,"#tmcn", "#mainInfo", {"event":"start_instructions", "aws_id": turk.emit(), "socket_id":socketId});
+        if ($("#agree").prop('checked') == true) {           
+             if (replay){
+                changeDisplay(socket, "game_info" ,"#tmcn", "#mainReplayInfo", {"event":"start_instructions", "aws_id": turk.emit(), "socket_id":socketId});            
+            }else {
+                changeDisplay(socket, "game_info" ,"#tmcn", "#mainInfo", {"event":"start_instructions", "aws_id": turk.emit(), "socket_id":socketId});
+            }        
         } else {
             alert('Please indicate that you have read and agree to the Terms and Conditions and Privacy Policy');
         }
@@ -573,17 +578,33 @@ $(document).ready(function() {
         changeDisplay(socket, "start_wait", "#quiz-success", "#wait-room", {"event":"start_wait", "aws_id": turk.emit(), "socket_id":socketId})
     });
 
-    $("#join-quiz").on("click", function(){
-        joinQuiz(socket, socketId, turk.emit());
-    });
+    
 
-    $("#continue-instructions").on("click", function(){
-        changeDisplay(socket, "game_info", "#mainInfo", "#mainInfo2", {"event":"continue-instructions", "aws_id": turk.emit(), "socket_id":socketId})
-    });
+    if (replay){
+        $("#join-replay-quiz").on("click", function(){
+            joinQuiz(socket, socketId, turk.emit());
+        });
 
-    $("#revise-intructions").on("click", function(){
-        changeDisplay(socket, "game_info", "#quiz-fail", "#mainInfo", {"event":"revise_instructions", "aws_id": turk.emit(), "socket_id":socketId})
-    });
+        $("#continue-replay-instructions").on("click", function(){
+            changeDisplay(socket, "game_info", "#mainReplayInfo", "#mainReplayInfo2", {"event":"continue-instructions", "aws_id": turk.emit(), "socket_id":socketId})
+        });
+    
+        $("#revise-replay-intructions").on("click", function(){
+            changeDisplay(socket, "game_info", "#quiz-fail", "#mainReplayInfo", {"event":"revise_replay_instructions", "aws_id": turk.emit(), "socket_id":socketId})
+        });
+    }else{
+        $("#join-quiz").on("click", function(){
+            joinQuiz(socket, socketId, turk.emit());
+        });
+
+        $("#continue-instructions").on("click", function(){
+            changeDisplay(socket, "game_info", "#mainInfo", "#mainInfo2", {"event":"continue-instructions", "aws_id": turk.emit(), "socket_id":socketId})
+        });
+
+        $("#revise-intructions").on("click", function(){
+            changeDisplay(socket, "game_info", "#quiz-fail", "#mainInfo", {"event":"revise_instructions", "aws_id": turk.emit(), "socket_id":socketId})
+        });
+    }
 
     $('#start-session').on("click", function(){
         startSession(expObj, socket, "#session-over", "#game-screen", "#sessionId", {"event":"start_game", "s_id": sessionId, "aws_id": turk.emit(), 'rm_id':roomIdx,

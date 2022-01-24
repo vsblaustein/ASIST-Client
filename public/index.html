@@ -13,6 +13,7 @@
   <script src="/js/lib/easytimer.min.js"></script>
   <script src="/js/lib/phaser.min.js"></script>
   <script src="/js/lib/mmturkey.js"></script>
+  <script src="/js/lib/papaparse.min.js"></script>
   <script type="module" src="/js/index.js"></script>
 </head>
 
@@ -81,6 +82,30 @@
           </div>
         </div>
   </div>
+  <div id="mainReplayInfo" style="display: none; margin-top: 5%; margin-left: 5%; margin-bottom: 20%; margin-right:5%;">
+    <div class="row">
+      <div class="col">
+        <h2>
+          INSTRUCTIONS PAGE 1.
+        </h2>
+        <h3> Please pay attention to these task instructions, you will be asked questions to test your comprehension, and you won’t be able to start the task until you answer them accurately.</h3>
+        
+        <div>
+          <p>You will observe playback videos of an avatar controlled by a player. Your job is to figure out what the other player knows and to predict what they will do next. 
+          </p>
+        <p>In the game the other player is playing, they are a medic arriving at an office building after an earthquake. 
+          Their task is to save all of the people in the building as quickly as possible. Unsaved victims are indicated 
+          by purple blocks, which turn yellow  once you have successfully saved them. Players save victims by pressing 
+          the “R”  key while standing next to them. The players know that there is one victim in each room, but they 
+          don’t know where in the room the victim will be.
+        </p>
+          <a class="btn btn-primary btn-md" id="continue-replay-instructions">
+            Continue Instructions
+          </a>
+        </div>
+      </div>
+    </div>
+</div>
   <div id="mainInfo2" style="display: none; margin-top: 5%; margin-left: 5%; margin-bottom: 20%; margin-right:5%;">
     <div class="row">
       <div class="col">
@@ -104,6 +129,28 @@
         </p>
         <div>
           <a class="btn btn-primary btn-md" id="join-quiz">
+            Click to Start Quiz
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="mainReplayInfo2" style="display: none; margin-top: 5%; margin-left: 5%; margin-bottom: 20%; margin-right:5%;">
+    <div class="row">
+      <div class="col">
+        <h2>
+          INSTRUCTIONS PAGE 2.
+        </h2>
+        <h3> Please pay attention to these task instructions, you will be asked questions to test your comprehension, 
+        and you won’t be able to start the task until you answer them accurately.</h3>
+        <p>The earthquake has caused structural damage to the building, so some paths that were previously traversable 
+          are now blocked, and some walls have collapsed to create new openings. Some players have access to a map of 
+          what the building looked like before the earthquake (left side of the screen, below this text),  Other players
+           have access to an updated map (right side of the screen, below this text). After each video clip, you will be
+            asked which of the two maps the player had access to based on how they moved through the building, and where
+             you think they will go next</p>
+        <div>
+          <a class="btn btn-primary btn-md" id="join-replay-quiz">
             Click to Start Quiz
           </a>
         </div>

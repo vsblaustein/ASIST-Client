@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const app = express();
 const public = path.join(__dirname, '/public');
-var replay = true;
+var replay = false;
 app.use('/', express.static(public));
 
 const game_config = require('./config/game-map_v0.1.json');

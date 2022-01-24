@@ -1,5 +1,7 @@
 import {getSurveyJson} from "/js/config.js";
 
+var replay = false;
+
 var actExpSmryBtn = function () {
 // Activates the button to visit experiment information page on clicking the box to agree on the experiment conditions
     if($(this).prop('checked') == true) {
@@ -17,7 +19,11 @@ var changeDisplay = function(socketObj, handlerId, hideElement, showElement, key
 }
 
 var joinQuiz = function(socket, socketId, awsID){
-    changeDisplay(socket, "game_info", "#mainInfo2", "#surveyContainer", {"event":"start_quiz", "aws_id": awsID, "socket_id":socketId})
+    if (replay){
+        changeDisplay(socket, "game_info", "#mainReplayInfo2", "#surveyContainer", {"event":"start_quiz", "aws_id": awsID, "socket_id":socketId})
+    }else{
+        changeDisplay(socket, "game_info", "#mainInfo2", "#surveyContainer", {"event":"start_quiz", "aws_id": awsID, "socket_id":socketId})
+    }
     var sendDataToServer = function (survey) {
         let quizResult = true;
         var quizData;
