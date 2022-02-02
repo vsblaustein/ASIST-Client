@@ -1,6 +1,6 @@
 import {actExpSmryBtn, endSession, startSession, joinQuiz, changeDisplay} from "/js/expNav.js";
 import {PlayerDisplay, GameState, NavigationMap} from "/js/gameUtils.js"
-import {phaserConfig, getMapData, getGameData, getSocketURL, getRandomConfig, getCSVConfig, getNavigationMapData} from "/js/config.js"
+import {phaserConfig, getMapData, getReplayData, getGameData, getSocketURL, getRandomConfig, getCSVConfig, getNavigationMapData} from "/js/config.js"
 
 
 var roomIdx = "na";
@@ -13,7 +13,7 @@ var sessionLimit = 1;
 var victimCount;
 var feedback_str = "No Feedback Given";
 var replay_moves = new Array();
-var replay = false;
+var replay = true;
 const socket = io(getSocketURL(), {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -53,7 +53,7 @@ var gamePlayState = new Phaser.Class({
         console.log("frame width: " + this.gameConfig["leaderFrameWidth"]);
         if (this.gameConfig["leaderName"]!=null){
             this.load.spritesheet(this.gameConfig["leaderName"], "/assets/"+this.gameConfig["leaderName"]+".png",
-            {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
+            {frameWidth: this.gameConfig["leaderFrameWidth"], frameHeight: this.gameConfig["leaderFrameHeight"]});
         }
 
         for (let i = 0; i < this.gameConfig.players.length; ++i) {
@@ -219,7 +219,7 @@ var replayState = new Phaser.Class({
     preload: function() {
         console.log("GamePlay preload");
         this.mapConfig = getMapData();
-        this.gameConfig = getGameData();
+        this.gameConfig = getReplayData();
         let randomSelectionValues = getRandomConfig();
         if (randomSelectionValues!=null){
             this._updateGameConfig(randomSelectionValues)
@@ -231,7 +231,7 @@ var replayState = new Phaser.Class({
 
         if (this.gameConfig["leaderName"]!=null){
             this.load.spritesheet(this.gameConfig["leaderName"], "/assets/"+this.gameConfig["leaderName"]+".png",
-            {frameWidth: this.gameConfig["playerFrameWidth"], frameHeight: this.gameConfig["playerFrameHeight"]});
+            {frameWidth: this.gameConfig["leaderFrameWidth"], frameHeight: this.gameConfig["leaderFrameHeight"]});
         }
 
         /*this.load.spritesheet(this.gameConfig["playerName"], "/assets/"+this.gameConfig["playerName"]+".png",

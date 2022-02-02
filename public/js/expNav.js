@@ -1,6 +1,6 @@
 import {getSurveyJson} from "/js/config.js";
 
-var replay = false;
+var replay = true;
 
 var actExpSmryBtn = function () {
 // Activates the button to visit experiment information page on clicking the box to agree on the experiment conditions

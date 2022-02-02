@@ -55,8 +55,7 @@ var getNavigationMapData = function(){
     return navigationMapData
 }
 
-var getGameData = function(){
-    //game time '00' or minutes like '2'. If it was '2' that is timer with deadline, gameTimeArg would be {precision: 'secondTenths', countdown: true, startValues: {minutes: gameTime}}
+var getReplayData = function(){
     let gameSetUpData = {
         "roundCount":0,
         "roundLimit":20000000,
@@ -79,6 +78,39 @@ var getGameData = function(){
         "leaderDelay":500,
         "leaderX":5,
         "leaderY":75,
+        "leaderFrameWidth":32,
+        "leaderFrameHeight":48,
+        "leaderMovementIndexes": null,
+        gameTime:"00",
+        gameTimeArg:{}
+    }
+    return gameSetUpData
+}
+
+var getGameData = function(){
+    //game time '00' or minutes like '2'. If it was '2' that is timer with deadline, gameTimeArg would be {precision: 'secondTenths', countdown: true, startValues: {minutes: gameTime}}
+    let gameSetUpData = {
+        "roundCount":0,
+        "roundLimit":20000000,
+        "players":[{
+            "playerX":5,
+            "playerY":75,
+            "playerName":"dude",
+            "playerFrameWidth":32,
+            "playerFrameHeight":48,
+        }
+        // {
+        //     "playerX":6,
+        //     "playerY":77,
+        //     "playerName":"player1",
+        //     "playerFrameWidth":32,
+        //     "playerFrameHeight":48,
+        // }
+    ],
+        "leaderName":null,
+        "leaderDelay":null,
+        "leaderX":null,
+        "leaderY":null,
         "leaderFrameWidth":32,
         "leaderFrameHeight":48,
         gameTime:"00",
@@ -174,5 +206,5 @@ var getSocketURL = function (){
 }
 
 
-export {phaserConfig, getMapData, getGameData, getSocketURL, getRandomConfig, getCSVConfig, getSurveyJson, getNavigationMapData};
+export {phaserConfig, getMapData, getReplayData, getGameData, getSocketURL, getRandomConfig, getCSVConfig, getSurveyJson, getNavigationMapData};
 
