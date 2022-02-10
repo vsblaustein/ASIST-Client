@@ -166,7 +166,10 @@ class GameState {
         }
     }
 
-
+    _drawColorPath(idx){
+        let rect = this.scene.add.rectangle(20, 20, this.cw, this.ch, 0x2D708EFF, 0.25);
+        this.placeAtIndex(idx, rect);
+    }
     // _drawText(){
 
     //     this.placeAtIndex(311, this.scene.add.text(0,0, "Room A", {color: '0x000000', fontSize: '20px'}));

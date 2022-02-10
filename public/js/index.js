@@ -2,7 +2,6 @@ import {actExpSmryBtn, endSession, startSession, joinQuiz, changeDisplay} from "
 import {PlayerDisplay, GameState, NavigationMap} from "/js/gameUtils.js"
 import {phaserConfig, getMapData, getReplayData, getGameData, getSocketURL, getRandomConfig, getCSVConfig, getNavigationMapData} from "/js/config.js"
 
-
 var roomIdx = "na";
 var playerId = "na";
 var leaderId = "1";
@@ -308,6 +307,7 @@ var replayState = new Phaser.Class({
                 }
             }
         }
+        this.gameState._drawColorPath(newIdx);
         this.playersCurrentLoc[message["p_id"]] = newIdx
         this.playerList[message["p_id"]].move(message["x"], message["y"], message["event"])
 
@@ -398,7 +398,7 @@ var replayState = new Phaser.Class({
 
     _parseCSV: async function(){
         var replay_data = new Array()
-        const data = await fetch('assets/allKnowledge_game2_DHyRxQn7XmZXMfZqAAAd.csv').then(response => response.text())
+        const data = await fetch('assets/allKnowledge_game1_1FDiIoXI4jdGxRj8AAAd.csv').then(response => response.text())
         var counter = 0
         Papa.parse(data, {
             header: true,
