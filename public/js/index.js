@@ -310,6 +310,7 @@ var replayState = new Phaser.Class({
                 }
             }
         }
+        this.gameState._drawColorPath(newIdx);
         this.playersCurrentLoc[message["p_id"]] = newIdx
         this.playerList[message["p_id"]].move(message["x"], message["y"], message["event"])
 
