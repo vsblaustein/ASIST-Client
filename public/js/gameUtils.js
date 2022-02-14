@@ -10,6 +10,10 @@ class PlayerDisplay {
         this.updateTime = new Date().toISOString();
         this.direction = "down"
         this.physicsObj = gameScene.add.sprite(32, 32, Config.name);
+        this.replay = true;
+        if (this.replay) {
+            this.hoverBox = gameScene.add.rectangle(0, 0, 200, 160).setStrokeStyle(2, 0x0000ff);
+        }
         this.gameScene.gameState.placeAt(this.x, this.y, this.physicsObj);
         this.physicsObj.displayHeight = (this.gameScene.sys.game.scale.gameSize._height/this.gameScene.mapConfig.rows);
         this.physicsObj.scaleX = this.physicsObj.scaleY;
@@ -61,6 +65,9 @@ class PlayerDisplay {
         this.updateTime = new Date().toISOString();
         console.log(this.name, this.x, this.y, direction);
         this.gameScene.gameState.placeAt(this.x, this.y, this.physicsObj);
+        if (this.replay) {
+            this.gameScene.gameState.placeAt(this.x, this.y, this.hoverBox);
+        }
         this.physicsObj.anims.play(this.name+direction);
     }
 }

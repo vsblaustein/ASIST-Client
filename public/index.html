@@ -158,23 +158,28 @@
     </div>
   </div>
   <div style="display: none;" id="surveyContainer"></div>
-<div id="game-screen" style='display: none;'>
-  <div id="game-time">
-    <span id="sessionTitle" style='display: none;'>Game No: </span><span id='sessionId' style='display: none;'></span><span id="timerTitle">  GAME TIMER:</span><span id='timerTime'></span>
-  </div>
+  <div id="game-screen" style='display: none;'>
+    <div id="game-time">
+      <span id="sessionTitle" style='display: none;'>Game No: </span><span id='sessionId' style='display: none;'></span><span id="timerTitle">  GAME TIMER:</span><span id='timerTime'></span>
+    </div>
 
-    <div class="grid-game-container">
-      <div class="grid-child-info" id='phaser-game-info'>
-          <div class="grid-info-container">
-              <h6 style="font-weight: 800; color: #3f3e42f1; padding-left: 1%;">Victim Count: <span id="victim-count" style="color: #a33c22f1"></span></h6>
-              <img class="phaser-game-legend" src="/assets/legend.png" width="450px">
-              <div id='phaser-game-info'></div>
-          </div>
-      </div>
-      <div class="grid-child-game" id='phaser-game'>
-      </div>
+      <div class="grid-game-container">
+        <!-- <div class="grid-child-info" id='phaser-game-info'>
+            <div class="grid-info-container">
+                <h6 style="font-weight: 800; color: #3f3e42f1; padding-left: 1%;">Victim Count: <span id="victim-count" style="color: #a33c22f1"></span></h6>
+                <img class="phaser-game-legend" src="/assets/legend.png" width="450px">
+                <div id='phaser-game-info'></div>
+            </div>
+        </div> -->
+        <div class="grid-info-container">
+          <h6 style="font-weight: 800; color: #3f3e42f1; padding-left: 1%;">Victim Count: <span id="victim-count" style="color: #a33c22f1"></span></h6>
+          <img class="phaser-game-legend" src="/assets/legend.png" width="450px">
+          <!-- <div id='phaser-game-info'></div> -->
+        </div>
+        <div class="grid-child-game" id='phaser-game'>
+        </div>
+    </div>
   </div>
-</div>
 
   <h1 class="font-weight-bold" style='display:none; margin:20%;  text-align:center; color:darkslategray;' id='wait-room'>Waiting for other players to join</h1>
   <h1 class="font-weight-bold" style='display:none; margin:20%;  text-align:center; color:darkslategray;' id='game-over'>Thank you! You can close this window</h1>

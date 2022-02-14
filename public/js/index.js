@@ -281,7 +281,6 @@ var replayState = new Phaser.Class({
         }
 
         this.cameras.main.setBounds(0, 0, 775, 625).setName('main');
-        this.cameras.main.setZoom(4);
         this.cameras.main.startFollow(this.leaderDude.physicsObj);
         this.cameras.main.setLerp(0.2);
 
@@ -419,7 +418,7 @@ var replayState = new Phaser.Class({
 
     _parseCSV: async function(){
         var replay_data = new Array()
-        const data = await fetch('assets/allKnowledge_game2_DHyRxQn7XmZXMfZqAAAd.csv').then(response => response.text())
+        const data = await fetch('assets/Whr7WBffonjahFYcAAAj.csv').then(response => response.text())
         var counter = 0
         Papa.parse(data, {
             header: true,
