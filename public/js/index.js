@@ -14,6 +14,8 @@ var victimCount;
 var feedback_str = "No Feedback Given";
 var replay_moves = new Array();
 var replay = true;
+var firstVictim = 1; //0 and 24 for complete replay
+var lastVictim = 3;
 const socket = io(getSocketURL(), {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -330,6 +332,7 @@ var replayState = new Phaser.Class({
             'p_id': 1, 'victim':replay_moves[currentLeaderloc][3], "input_time":new Date().toISOString() 
             })
         }else{
+            console.log("entered if move")
             socket.emit("player_move", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
             "s_id":sessionId, "socket_id":socketId, "event":replay_moves[currentLeaderloc][2], "aws_id": turk.emit(),'rm_id':roomIdx,
             'p_id': 1, "input_time":new Date().toISOString()
@@ -340,16 +343,25 @@ var replayState = new Phaser.Class({
         }
     },
     _leaderVictimSave(message){
+        console.log("entered leaderVictimSave")
         let victimIndex = parseInt(message["victim"])
         console.log("victim index in leader victim save: " + victimIndex);
         console.log("change victim color");
         this.gameState.victimObj[String(victimIndex)].fillColor = "0xf6fa78";
         this.gameState.set_victims.delete(victimIndex);
         victimCount = this.gameState.set_victims.size
-        if (this.gameState.set_victims.size === 0){
-            console.log("SUCCESS")
-            this.input.keyboard.removeAllKeys()
-            sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+        if (firstVictim == 0 && lastVictim == 24){
+            if (this.gameState.set_victims.size === 0){
+                console.log("SUCCESS")
+                this.input.keyboard.removeAllKeys()
+                sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+            }
+        }else{
+            if (this.gameState.set_victims.size === (24-(lastVictim-firstVictim+1))){
+                console.log("SUCCESS")
+                this.input.keyboard.removeAllKeys()
+                sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+            }
         }
     },
     _victimSave(){
@@ -372,10 +384,18 @@ var replayState = new Phaser.Class({
                     this.gameState.victimObj[String(victimIndex)].fillColor = "0xf6fa78";
                     this.gameState.set_victims.delete(victimIndex);
                     victimCount = this.gameState.set_victims.size
-                    if (this.gameState.set_victims.size === 0){
-                        console.log("SUCCESS")
-                        this.input.keyboard.removeAllKeys()
-                        sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+                    if (firstVictim == 0 && lastVictim == 24){
+                        if (this.gameState.set_victims.size === 0){
+                            console.log("SUCCESS")
+                            this.input.keyboard.removeAllKeys()
+                            sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+                        }
+                    }else{
+                        if (this.gameState.set_victims.size === (24-(lastVictim-firstVictim+1))){
+                            console.log("SUCCESS")
+                            this.input.keyboard.removeAllKeys()
+                            sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
+                        }
                     }
                 }
             }
@@ -421,9 +441,57 @@ var replayState = new Phaser.Class({
                 });
             }
         });
-        console.log("Replay length", replay_data.length)
-        return replay_data
 
+        var replay_data_subset = new Array();
+        if (firstVictim == 0 && lastVictim == 24){
+            console.log("entered full subset");
+            replay_data_subset = replay_data
+        }else{
+            console.log("entered partial subset else");
+            var victimCounter = 0;
+            var firstVictimIndex = 0;
+            var lastVictimIndex = 0;
+            var firstVicCounter = 0;
+            var lastVicCounter = 0;
+            //find first and last victims in subset
+            for (let i = 0; i < replay_data.length; i++){
+                if (replay_data[i][2] == "rs"){
+                    victimCounter = victimCounter + 1;
+                }
+                if (victimCounter == firstVictim && firstVicCounter == 0){
+                    firstVictimIndex = i;
+                    firstVicCounter = 1;
+                    console.log("first vic index: " + firstVictimIndex);
+                }
+                if (victimCounter == lastVictim && lastVicCounter == 0){
+                    lastVictimIndex = i;
+                    lastVicCounter = 1;
+                    console.log("last vic index: " + lastVictimIndex);
+                }
+            }
+            //find door index for room of first victim
+            var jIdx = 0;
+            var subsetStartIdx = 0;
+            var subsetStartX = 0;
+            var subsetStartY = 0;
+            for (let j = firstVictimIndex; j > 0; j--){
+                jIdx = (replay_data[j][1]*this.mapConfig.cols)+parseInt(replay_data[j][0]);
+                if (this.mapConfig.doorIndexes.includes(jIdx)){
+                    subsetStartIdx = j;
+                    subsetStartX = replay_data[j][0];
+                    subsetStartY = replay_data[j][1];
+                    break;
+                }
+            }
+            //push every move between door index of room containing first victim and index of last vicitm (inclusive) into replay moves array
+            replay_data_subset.push(replay_data[0])
+            for (let k = subsetStartIdx; k <= lastVictimIndex; k++){
+                replay_data_subset.push(replay_data[k])
+            }
+        }
+        console.log("Replay subset length", replay_data_subset.length);
+        console.log(replay_data_subset);
+        return replay_data_subset
     }
 });
 
