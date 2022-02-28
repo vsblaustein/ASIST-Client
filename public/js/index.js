@@ -324,6 +324,10 @@ var replayState = new Phaser.Class({
     },
     _leaderAnimation: function(){
         let currentLeaderloc = replay_moves.length - (this.leaderTimer.getRepeatCount())
+        console.log("location: " + replay_moves[currentLeaderloc]);
+        if (replay_moves[currentLeaderloc] == undefined){
+            this.scene.start("Inbetween");
+        }else 
         if (replay_moves[currentLeaderloc][2] == "rs"){
             console.log("entered if rs")
             console.log("victim index in leaderAnimation: " + replay_moves[currentLeaderloc][3])
@@ -418,7 +422,7 @@ var replayState = new Phaser.Class({
 
     _parseCSV: async function(){
         var replay_data = new Array()
-        const data = await fetch('assets/Whr7WBffonjahFYcAAAj.csv').then(response => response.text())
+        const data = await fetch('assets/allKnowledge_game1_1FDiIoXI4jdGxRj8AAAd.csv').then(response => response.text())
         var counter = 0
         Papa.parse(data, {
             header: true,
@@ -495,10 +499,29 @@ var replayState = new Phaser.Class({
     }
 });
 
+var inbetweenState = new Phaser.Class({
+    Extends: Phaser.Scene,
+    initialize: function(){
+        Phaser.Scene.call(this, {key: 'Inbetween'});
+    },
+    preload: function() {
+
+    },
+    create: function() {
+        let d = lastVictim - firstVictim + 1;
+        firstVictim += d;
+        lastVictim += d;
+        console.log("firstVictim: " + firstVictim);
+        console.log("lastVictim: " + lastVictim);
+        this.scene.start("GamePlay");
+    },
+});
+
 console.log("Game Object");
 const expObj = new Phaser.Game(phaserConfig); //Instantiate the game
 if (replay){
     expObj.scene.add("Replay", replayState);
+    expObj.scene.add("Inbetween", inbetweenState);
 } else {
     expObj.scene.add("Gameplay", gamePlayState);
 }
