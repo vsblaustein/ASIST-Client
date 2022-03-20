@@ -13,9 +13,12 @@ var sessionLimit = 1;
 var victimCount;
 var feedback_str = "No Feedback Given";
 var replay_moves = new Array();
+var replay_data = new Array();
 var replay = true;
-var firstVictim = 1; //0 and 24 for complete replay
+var firstVictim = 1; //1 and 24 for complete replay
+var firstVictimIndex = 0;
 var lastVictim = 3;
+var hoverBoxColor = 0;
 const socket = io(getSocketURL(), {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -241,7 +244,8 @@ var replayState = new Phaser.Class({
     },
 
     create: async function() {
-        replay_moves = await this._parseCSV();
+        replay_data = await this._parseCSV();
+        replay_moves = await this._replaySubset(replay_data);
         let randomSelectionValues = getCSVConfig();
             if (randomSelectionValues!=null){
                 this._updateGameConfig(randomSelectionValues)
@@ -250,6 +254,7 @@ var replayState = new Phaser.Class({
 
         console.log("GamePlay create");
         this.gameState = new GameState(this.mapConfig, this)
+        this._replayHistory(replay_data);
         
         /*
         console.log("Replay length", replay_moves.length)
@@ -279,6 +284,9 @@ var replayState = new Phaser.Class({
                 repeat: replay_moves.length - 1
             });
         }
+
+        this.playerList[leaderId].changeHoverBoxColor(hoverBoxColor);
+        hoverBoxColor++;
 
         this.cameras.main.setBounds(0, 0, 775, 625).setName('main');
         this.cameras.main.startFollow(this.leaderDude.physicsObj);
@@ -325,9 +333,9 @@ var replayState = new Phaser.Class({
     _leaderAnimation: function(){
         let currentLeaderloc = replay_moves.length - (this.leaderTimer.getRepeatCount())
         console.log("location: " + replay_moves[currentLeaderloc]);
-        if (replay_moves[currentLeaderloc] == undefined){
+        /*if (replay_moves[currentLeaderloc] == undefined){
             this.scene.start("Inbetween");
-        }else 
+        }else */
         if (replay_moves[currentLeaderloc][2] == "rs"){
             console.log("entered if rs")
             console.log("victim index in leaderAnimation: " + replay_moves[currentLeaderloc][3])
@@ -335,6 +343,8 @@ var replayState = new Phaser.Class({
             "s_id":sessionId, "socket_id":socketId, "event":replay_moves[currentLeaderloc][2], "aws_id": turk.emit(),'rm_id':roomIdx,
             'p_id': 1, 'victim':replay_moves[currentLeaderloc][3], "input_time":new Date().toISOString() 
             })
+        }else if (replay_moves[currentLeaderloc] == "end of subset"){
+            this.scene.start("Inbetween");
         }else{
             console.log("entered if move")
             socket.emit("player_move", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
@@ -446,14 +456,17 @@ var replayState = new Phaser.Class({
             }
         });
 
+        return replay_data;
+    },
+
+    _replaySubset: async function(replay_data){
         var replay_data_subset = new Array();
-        if (firstVictim == 0 && lastVictim == 24){
+        if (firstVictim == 1 && lastVictim == 24){
             console.log("entered full subset");
             replay_data_subset = replay_data
         }else{
             console.log("entered partial subset else");
             var victimCounter = 0;
-            var firstVictimIndex = 0;
             var lastVictimIndex = 0;
             var firstVicCounter = 0;
             var lastVicCounter = 0;
@@ -480,7 +493,7 @@ var replayState = new Phaser.Class({
             var subsetStartY = 0;
             for (let j = firstVictimIndex; j > 0; j--){
                 jIdx = (replay_data[j][1]*this.mapConfig.cols)+parseInt(replay_data[j][0]);
-                if (this.mapConfig.doorIndexes.includes(jIdx)){
+                if (this.mapConfig.doorIndexes.includes(jIdx) || this.mapConfig.gapIndexes.includes(jIdx)){
                     subsetStartIdx = j;
                     subsetStartX = replay_data[j][0];
                     subsetStartY = replay_data[j][1];
@@ -492,10 +505,44 @@ var replayState = new Phaser.Class({
             for (let k = subsetStartIdx; k <= lastVictimIndex; k++){
                 replay_data_subset.push(replay_data[k])
             }
+            replay_data_subset.push("end of subset")
         }
         console.log("Replay subset length", replay_data_subset.length);
         console.log(replay_data_subset);
         return replay_data_subset
+    },
+
+    _replayHistory: function(replay_data){
+        if (firstVictim == 1){
+            return; //first subset in recording has no history
+        }
+        for (let j = 0; j < firstVictimIndex; j++){
+            var jIdx = (replay_data[j][1]*this.mapConfig.cols)+parseInt(replay_data[j][0]);
+            //if door or gap, unblock room
+            if (this.mapConfig.doorIndexes.includes(jIdx)){
+                for (let roomIndex of this.mapConfig.doorRoomMapping[jIdx]){
+                    this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[String(roomIndex)], this.gameState.set_victims);
+                    this.gameState.makeRoomVisible(this.gameState.roomViewObj[roomIndex]);
+                }
+            }else if (this.mapConfig.gapIndexes.includes(jIdx)){
+                for (let roomIndex of this.mapConfig.gapRoomMapping[jIdx]){
+                    this.gameState.makeVictimsVisible(this.gameState.roomVictimObj[String(roomIndex)], this.gameState.set_victims);
+                    this.gameState.makeRoomVisible(this.gameState.roomViewObj[String(roomIndex)]);
+                }
+            }
+            //if victim saved, change color
+            if (replay_data[j][2] == "rs"){
+                let rescueIndexes = this.gameState.getVictimRescueIndexes(replay_data[j][1], replay_data[j][0]);
+                console.log("history rescue indexes: " + rescueIndexes);
+                console.log(this.gameState.set_victims);
+                for(const victimIndex of this.gameState.set_victims){
+                    if (rescueIndexes.includes(parseInt(victimIndex))){
+                        console.log("history: victim index:" + victimIndex);
+                        this.gameState.victimObj[String(victimIndex)].fillColor = "0xf6fa78";
+                    }
+                }
+            }
+        }
     }
 });
 
@@ -513,7 +560,13 @@ var inbetweenState = new Phaser.Class({
         lastVictim += d;
         console.log("firstVictim: " + firstVictim);
         console.log("lastVictim: " + lastVictim);
-        this.scene.start("GamePlay");
+
+        //button = this.add.button(400, 400, 'Go to next recording', actionOnClick, this, 2, 1, 0);
+        const msg = this.add.text(100, 180, 'You will now see another recording with a new medic', {fill: '#111'});
+        const contButton = this.add.text(100, 200, 'Click here to continue', {fill: '#111'})
+            .setInteractive()
+            .setStyle({backgroundColor: '#87CEFA'})
+            .on('pointerdown', () => this.scene.start("GamePlay"));
     },
 });
 

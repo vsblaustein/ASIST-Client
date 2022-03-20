@@ -69,7 +69,12 @@ class PlayerDisplay {
             this.gameScene.gameState.placeAt(this.x, this.y, this.hoverBox);
         }
         this.physicsObj.anims.play(this.name+direction);
-    }
+    };
+
+    changeHoverBoxColor(colorIndex){
+        let colors = [0x0000ff, 0x00eaff, 0x6a329f, 0xff95c4, 0xfbff00, 0xff0000, 0xffa400, 0xc50000, 0x005f60]
+        this.hoverBox.setStrokeStyle(2, colors[colorIndex]);
+    };
 }
 
 
@@ -234,8 +239,8 @@ class GameState {
         let y = parseInt(yCoord);
         for(var i=y-1; i<=y+1; i++){
             for(var j=x-1; j<=x+1; j++){
-                console.log("i: " + i + " j: " + j + " cols: " + this.config.cols);
-                console.log("x: " + x + " y: " + y);
+                //console.log("i: " + i + " j: " + j + " cols: " + this.config.cols);
+                //console.log("x: " + x + " y: " + y);
                 rescueIndexes.push((i*this.config.cols)+j);
             }
         }
