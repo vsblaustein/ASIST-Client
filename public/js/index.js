@@ -17,7 +17,7 @@ var replay_data = new Array();
 var replay = true;
 var firstVictim = 1; //1 and 24 for complete replay
 var firstVictimIndex = 0;
-var lastVictim = 3;
+var lastVictim = 1;
 var hoverBoxColor = 0;
 const socket = io(getSocketURL(), {transports: ['websocket']})
 var gamePlayState = new Phaser.Class({
@@ -333,10 +333,10 @@ var replayState = new Phaser.Class({
     _leaderAnimation: function(){
         let currentLeaderloc = replay_moves.length - (this.leaderTimer.getRepeatCount())
         console.log("location: " + replay_moves[currentLeaderloc]);
-        /*if (replay_moves[currentLeaderloc] == undefined){
-            this.scene.start("Inbetween");
-        }else */
-        if (replay_moves[currentLeaderloc][2] == "rs"){
+        if (replay_moves[currentLeaderloc] == undefined){
+            console.log("replay_moves[currentLeaderloc] is undefined")
+            // TODO: Figure out where this condition is coming from
+        }else if (replay_moves[currentLeaderloc][2] == "rs"){
             console.log("entered if rs")
             console.log("victim index in leaderAnimation: " + replay_moves[currentLeaderloc][3])
             socket.emit("rescue_success", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
@@ -344,7 +344,7 @@ var replayState = new Phaser.Class({
             'p_id': 1, 'victim':replay_moves[currentLeaderloc][3], "input_time":new Date().toISOString() 
             })
         }else if (replay_moves[currentLeaderloc] == "end of subset"){
-            this.scene.start("Inbetween");
+            this._setUpRoomListeners();
         }else{
             console.log("entered if move")
             socket.emit("player_move", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
@@ -362,7 +362,7 @@ var replayState = new Phaser.Class({
         console.log("victim index in leader victim save: " + victimIndex);
         console.log("change victim color");
         this.gameState.victimObj[String(victimIndex)].fillColor = "0xf6fa78";
-        this.gameState.set_victims.delete(victimIndex);
+        this.gameState.set_victims.delete(String(victimIndex));
         victimCount = this.gameState.set_victims.size
         if (firstVictim == 0 && lastVictim == 24){
             if (this.gameState.set_victims.size === 0){
@@ -376,6 +376,36 @@ var replayState = new Phaser.Class({
                 this.input.keyboard.removeAllKeys()
                 sessionId = endSession(game, socket, gameTimer, leaderId, roomIdx, sessionId, turk.emit(), socketId, "go_victim", sessionLimit, "Victim Saved")
             }
+        }
+    },
+    _setUpRoomListeners() {
+        console.log("setting up room listeners")
+
+        // Make all rooms selectable
+        for (let i = 10; i <= 33; ++i) {
+            this._makeRoomSelectable(i);
+        }
+
+        // Capture survey input
+        $("#knowledgeConditionQuestion").show();
+        var knowledgeCondition = document.forms.knowledgeConditionQuestion.knowledgeCondition.value;
+        console.log(knowledgeCondition);
+        const self = this;
+        $("#post-replay-input").on("click", function(){
+            self.scene.start("Inbetween");
+        });
+    },
+    _makeRoomSelectable(room){
+        console.log("in makeRoomSelectable");
+        var viewObjArray = this.gameState.roomViewObj[String(room)];
+        for (let i=0; i<viewObjArray.length; i++) {
+            viewObjArray[i].setFillStyle(0xFFFF00, viewObjArray[i].fillAlpha);
+            viewObjArray[i].setInteractive().on('pointerdown', function () {
+                for (let j=0; j<viewObjArray.length; j++) {
+                    viewObjArray[j].setFillStyle(0x00FF00, viewObjArray[j].fillAlpha);
+                }
+                console.log(room);
+            }, this);
         }
     },
     _victimSave(){
@@ -432,7 +462,7 @@ var replayState = new Phaser.Class({
 
     _parseCSV: async function(){
         var replay_data = new Array()
-        const data = await fetch('assets/allKnowledge_game1_1FDiIoXI4jdGxRj8AAAd.csv').then(response => response.text())
+        const data = await fetch('assets/Whr7WBffonjahFYcAAAj.csv').then(response => response.text())
         var counter = 0
         Papa.parse(data, {
             header: true,
@@ -560,6 +590,8 @@ var inbetweenState = new Phaser.Class({
         lastVictim += d;
         console.log("firstVictim: " + firstVictim);
         console.log("lastVictim: " + lastVictim);
+
+        $("#knowledgeConditionQuestion").hide();
 
         //button = this.add.button(400, 400, 'Go to next recording', actionOnClick, this, 2, 1, 0);
         const msg = this.add.text(100, 180, 'You will now see another recording with a new medic', {fill: '#111'});
@@ -721,8 +753,6 @@ $(document).ready(function() {
     $("#join-room").on("click", function(){
         changeDisplay(socket, "start_wait", "#quiz-success", "#wait-room", {"event":"start_wait", "aws_id": turk.emit(), "socket_id":socketId})
     });
-
-    
 
     if (replay){
         $("#join-replay-quiz").on("click", function(){

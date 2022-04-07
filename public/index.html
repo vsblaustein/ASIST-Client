@@ -162,8 +162,7 @@
     <div id="game-time">
       <span id="sessionTitle" style='display: none;'>Game No: </span><span id='sessionId' style='display: none;'></span><span id="timerTitle">  GAME TIMER:</span><span id='timerTime'></span>
     </div>
-
-      <div class="grid-game-container">
+    <div class="grid-game-container">
         <!-- <div class="grid-child-info" id='phaser-game-info'>
             <div class="grid-info-container">
                 <h6 style="font-weight: 800; color: #3f3e42f1; padding-left: 1%;">Victim Count: <span id="victim-count" style="color: #a33c22f1"></span></h6>
@@ -176,8 +175,17 @@
           <img class="phaser-game-legend" src="/assets/legend.png" width="450px">
           <!-- <div id='phaser-game-info'></div> -->
         </div>
-        <div class="grid-child-game" id='phaser-game'>
-        </div>
+        <div class="grid-child-game" id='phaser-game'></div>
+    </div>
+    <div style="display: none;" id="knowledgeConditionQuestion">
+      <p>As you watch the replay, do you believe the player was in the full knowledge condition, or no knowledge condition?</p>
+      <form name="knowledgeConditionQuestion">
+        <input type="radio" id="fullKnowledge" name="knowledgeCondition" value="fullKnowledge" checked>
+        <label for="fullKnowledge">Full Knowledge</label>
+        <input type="radio" id="noKnowledge" name="knowledgeCondition" value="noKnowledge">
+        <label for="noKnowledge">No Knowledge</label>
+        <a id="post-replay-input">Submit</a>
+      </form>
     </div>
   </div>
 

@@ -232,7 +232,6 @@ class GameState {
         }
     }
 
-
     getVictimRescueIndexes(yCoord, xCoord){
         let rescueIndexes = new Array();
         let x = parseInt(xCoord);
