@@ -15,6 +15,12 @@ var feedback_str = "No Feedback Given";
 var replay_moves = new Array();
 var replay_data = new Array();
 var replay = true;
+
+var coords_selected = new Array();
+var rooms_selected = new Array();
+var rooms_selected_times = new Array();
+var questions_asked_times = new Array();
+
 var firstVictim = 1; //1 and 24 for complete replay
 var firstVictimIndex = 0;
 var lastVictim = 1;
@@ -345,6 +351,7 @@ var replayState = new Phaser.Class({
             })
         }else if (replay_moves[currentLeaderloc] == "end of subset"){
             this._setUpRoomListeners();
+    
         }else{
             console.log("entered if move")
             socket.emit("player_move", {'x': replay_moves[currentLeaderloc][0], 'y': replay_moves[currentLeaderloc][1],
@@ -389,11 +396,22 @@ var replayState = new Phaser.Class({
         // Capture survey input
         $("#knowledgeConditionQuestion").show();
         var knowledgeCondition = document.forms.knowledgeConditionQuestion.knowledgeCondition.value;
+        console.log("knowledgeCondition:");
         console.log(knowledgeCondition);
+
+        //log time to database
+        questions_asked_times.push(new Date().toISOString());
+        console.log("questions_asked_times:");
+        console.log(questions_asked_times);
+
+        //emit questions_asked_times to database
+        socket.emit("ask_next_room", {"event":"ask_next_room", "aws_id": turk.emit(), 'rm_id':roomIdx, "socket_id":socketId, 'p_id': playerId, "s_id":sessionId, "time":new Date().toISOString(), "questions_asked_times":questions_asked_times});
+        
         const self = this;
         $("#post-replay-input").on("click", function(){
             self.scene.start("Inbetween");
         });
+
     },
     _makeRoomSelectable(room){
         console.log("in makeRoomSelectable");
@@ -404,10 +422,28 @@ var replayState = new Phaser.Class({
                 for (let j=0; j<viewObjArray.length; j++) {
                     viewObjArray[j].setFillStyle(0x00FF00, viewObjArray[j].fillAlpha);
                 }
+                console.log("room:");
                 console.log(room);
+
+                //log room number and time to database
+                coords_selected.push([this.playerList[leaderId].x, this.playerList[leaderId].y]);
+                rooms_selected.push(room);
+                rooms_selected_times.push(new Date().toISOString());
+
+                console.log("coords_selected:");
+                console.log(coords_selected);
+                console.log("rooms_selected:");
+                console.log(rooms_selected);
+                console.log("rooms_selected_times:");
+                console.log(rooms_selected_times);
+
+                //emit coord_selected, rooms_selected, and rooms_selected_times to database
+                socket.emit("choose_next_room", {"event":"choose_next_room", "aws_id": turk.emit(), 'rm_id':roomIdx, "socket_id":socketId, 'p_id': playerId, "s_id":sessionId, "time":new Date().toISOString(), "coords_selected":coords_selected, "rooms_selected":rooms_selected, "rooms_selected_times": rooms_selected_times})
+
             }, this);
         }
     },
+
     _victimSave(){
         console.log("reached victim save function")
         console.log("x coord: " + this.playerList[leaderId].x + " y coord: " + this.playerList[leaderId].y);
@@ -462,7 +498,7 @@ var replayState = new Phaser.Class({
 
     _parseCSV: async function(){
         var replay_data = new Array()
-        const data = await fetch('assets/Whr7WBffonjahFYcAAAj.csv').then(response => response.text())
+        const data = await fetch('assets/allKnowledge_game1_1FDiIoXI4jdGxRj8AAAd.csv').then(response => response.text())
         var counter = 0
         Papa.parse(data, {
             header: true,
@@ -816,6 +852,5 @@ socket.on('start_game', (message)=>{
     console.log(message)
     startSession(expObj, socket, gameInformation, "#wait-room", "#game-screen", "#sessionId", message);
 });
-
 
 export {replay_moves};
